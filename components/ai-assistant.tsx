@@ -264,6 +264,15 @@ export const AiAssistant = React.memo(() => {
     setInputValue(question)
   }, [])
 
+  const quickQuestions = useMemo(() => [
+    "喝了全糖奶茶好有负罪感",
+    "总是控制不住想喝奶茶",
+    "想要健康但又舍不得美味",
+    "如何坚持低卡奶茶计划？",
+    "朋友约奶茶怎么办？",
+    "减肥期间可以喝奶茶吗？",
+  ], [])
+
   return (
     <>
       {/* Floating Button */}
@@ -370,14 +379,7 @@ export const AiAssistant = React.memo(() => {
                     快速开始：
                   </p>
                   <div className="flex flex-wrap gap-1">
-                    {useMemo(() => [
-                      "喝了全糖奶茶好有负罪感",
-                      "总是控制不住想喝奶茶",
-                      "想要健康但又舍不得美味",
-                      "如何坚持低卡奶茶计划？",
-                      "朋友约奶茶怎么办？",
-                      "减肥期间可以喝奶茶吗？",
-                    ], []).map((question, index) => (
+                    {quickQuestions.map((question, index) => (
                       <Button
                         key={index}
                         variant="outline"
