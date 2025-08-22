@@ -139,7 +139,7 @@ export async function searchTeaProductsIntelligent(query: string, limit: number 
         }
         
         // 检查配料匹配
-        product.ingredients.forEach(ingredient => {
+        product.ingredients.forEach((ingredient: string) => {
           const ingredientScore = calculateSimilarity(term, ingredient.toLowerCase())
           if (ingredientScore > 0.3 || ingredient.toLowerCase().includes(term)) {
             totalScore += ingredientScore * 1.5 // 配料匹配权重中等

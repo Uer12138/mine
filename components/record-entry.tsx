@@ -8,6 +8,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Textarea } from "@/components/ui/textarea"
 import CupSizeSelector from './cup-size-selector'
 import SugarLevelCalculator from './sugar-level-calculator'
+import BrandSearch from './brand-search'
 import { saveTeaRecord, TeaProduct } from '@/lib/tea-database'
 import { getCurrentUserIdClient } from '@/lib/supabase'
 
@@ -213,7 +214,7 @@ export default function RecordEntry({ onClose, editingRecord, onSave }: RecordEn
               <BrandSearch
                 onDrinkSelect={(product: MilkTeaProduct) => {
                   setSelectedDrink(product)
-                  setDrinkName(product.name)
+                  setCustomName(product.name)
                   setShowBrandSearch(false)
                 }}
               />
