@@ -2,12 +2,12 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Plus, TrendingUp, Database, HardDrive } from "lucide-react"
+import { Plus, TrendingUp, Database, HardDrive, Edit, Trash2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 
 import RecordEntry from "@/components/record-entry"
-import { getUserTeaRecords, checkTeaDatabaseConnection, TeaRecord } from '@/lib/tea-database'
+import { getUserTeaRecords, checkTeaDatabaseConnection, deleteTeaRecord, TeaRecord } from '@/lib/tea-database'
 import { getCurrentUserIdClient } from '@/lib/supabase'
 
 export default function MyRecordsPage() {
@@ -17,6 +17,7 @@ export default function MyRecordsPage() {
   const [loading, setLoading] = useState(true)
   const [isSupabaseConnected, setIsSupabaseConnected] = useState(false)
   const [dataSource, setDataSource] = useState<'database' | 'localStorage'>('localStorage')
+  const [editingRecord, setEditingRecord] = useState<any>(null)
 
   // 辅助函数：格式化日期
   const formatDate = (timestamp: string) => {
@@ -39,6 +40,38 @@ export default function MyRecordsPage() {
       celebrating: '庆祝'
     }
     return moods[moodKey as keyof typeof moods] || moodKey
+  }
+
+  // 删除记录
+  const handleDeleteRecord = async (recordId: string) => {
+    try {
+      // 从状态中移除记录
+      const updatedRecords = records.filter(record => record.id !== recordId)
+      setRecords(updatedRecords)
+
+      // 更新本地存储
+      localStorage.setItem('teaRecords', JSON.stringify(updatedRecords))
+      // 清理旧的键名数据
+      localStorage.removeItem('milkTeaRecords')
+
+      // 如果连接到数据库，也需要从数据库中删除
+      if (isSupabaseConnected) {
+        try {
+          const userId = await getCurrentUserIdClient()
+          await deleteTeaRecord(recordId, userId)
+        } catch (error) {
+          console.error('删除数据库记录失败:', error)
+        }
+      }
+    } catch (error) {
+      console.error('删除记录失败:', error)
+    }
+  }
+
+  // 编辑记录
+  const handleEditRecord = (record: any) => {
+    setEditingRecord(record)
+    setShowRecordEntry(true)
   }
 
   // 检查数据库连接状态
@@ -84,7 +117,10 @@ export default function MyRecordsPage() {
       
       // 如果数据库加载失败或未连接，从localStorage加载
       try {
-        const savedRecords = localStorage.getItem('teaRecords') || localStorage.getItem('milkTeaRecords')
+        // 清理旧的键名数据
+        localStorage.removeItem('milkTeaRecords')
+        
+        const savedRecords = localStorage.getItem('teaRecords')
         if (savedRecords) {
           setRecords(JSON.parse(savedRecords))
           setDataSource('localStorage')
@@ -126,19 +162,6 @@ export default function MyRecordsPage() {
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-4">
                 <h2 className="text-2xl font-bold text-gray-800">记录历史</h2>
-                <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-gray-100">
-                  {dataSource === 'database' ? (
-                    <>
-                      <Database className="w-4 h-4 text-green-600" />
-                      <span className="text-sm text-green-600 font-medium">数据库</span>
-                    </>
-                  ) : (
-                    <>
-                      <HardDrive className="w-4 h-4 text-yellow-600" />
-                      <span className="text-sm text-yellow-600 font-medium">本地存储</span>
-                    </>
-                  )}
-                </div>
               </div>
             </div>
 
@@ -162,18 +185,15 @@ export default function MyRecordsPage() {
                 {records
                   .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
                   .map((record) => (
-                    <Card key={record.id} className="border-mint/20 hover:shadow-md transition-shadow">
+                    <Card key={record.id} className="border-mint/20 hover:shadow-md transition-shadow cursor-pointer group">
                       <CardContent className="p-4">
                         <div className="flex justify-between items-start">
-                          <div>
-                            <h4 className="font-semibold text-lg">{record.drink.name}</h4>
-                            {record.drink.brand && (
-                              <p className="text-sm text-gray-500 mb-1">品牌: {record.drink.brand}</p>
+                          <div className="flex-1" onClick={() => handleEditRecord(record)}>
+                            <h4 className="font-semibold text-lg">{record.drinkName}</h4>
+                            {record.brand && (
+                              <p className="text-sm text-gray-500 mb-1">品牌: {record.brand}</p>
                             )}
                             <div className="flex items-center mt-2 space-x-2">
-                              <span className="px-2 py-1 bg-mint/10 text-mint-dark text-xs rounded-full font-medium">
-                                {record.drink.calories}kcal
-                              </span>
                               {record.mood && (
                                 <span className="px-2 py-1 bg-gray-100 text-gray-800 text-xs rounded-full font-medium">
                                   {getMoodLabel(record.mood)}
@@ -181,14 +201,39 @@ export default function MyRecordsPage() {
                               )}
                             </div>
                           </div>
-                          <div className="text-right">
-                            <p className="text-sm text-gray-500">
-                              {formatDate(record.timestamp)}
-                            </p>
+                          <div className="flex items-center space-x-2">
+                            <div className="text-right mr-2">
+                              <p className="text-sm text-gray-500">
+                                {formatDate(record.timestamp)}
+                              </p>
+                            </div>
+                            <div className="flex space-x-1 opacity-100 transition-opacity">
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  handleEditRecord(record)
+                                }}
+                                className="h-8 w-8 p-0 hover:bg-blue-100"
+                              >
+                                <Edit className="h-4 w-4 text-blue-600" />
+                              </Button>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  handleDeleteRecord(record.id)
+                                }}
+                                className="h-8 w-8 p-1 hover:bg-red-100 rounded-md flex items-center justify-center cursor-pointer"
+                                style={{ pointerEvents: 'auto' }}
+                              >
+                                <Trash2 className="h-4 w-4 text-red-600" />
+                              </button>
+                            </div>
                           </div>
                         </div>
                         {record.notes && (
-                          <div className="mt-3 text-sm text-gray-600 bg-gray-50 p-2 rounded">
+                          <div className="mt-3 text-sm text-gray-600 bg-gray-50 p-2 rounded" onClick={() => handleEditRecord(record)}>
                             {record.notes}
                           </div>
                         )}
@@ -201,7 +246,37 @@ export default function MyRecordsPage() {
       </div>
 
       {/* Record Entry Modal */}
-      {showRecordEntry && <RecordEntry onClose={() => setShowRecordEntry(false)} />}
+      {showRecordEntry && (
+        <RecordEntry 
+          onClose={() => {
+            setShowRecordEntry(false)
+            setEditingRecord(null)
+          }}
+          editingRecord={editingRecord}
+          onSave={(updatedRecord) => {
+            if (editingRecord) {
+              // 更新现有记录
+              const updatedRecords = records.map(record => 
+                record.id === editingRecord.id ? { ...record, ...updatedRecord } : record
+              )
+              setRecords(updatedRecords)
+              localStorage.setItem('teaRecords', JSON.stringify(updatedRecords))
+            } else {
+              // 添加新记录
+              const newRecord = {
+                ...updatedRecord,
+                id: Date.now().toString(),
+                timestamp: new Date().toISOString()
+              }
+              const updatedRecords = [newRecord, ...records]
+              setRecords(updatedRecords)
+              localStorage.setItem('teaRecords', JSON.stringify(updatedRecords))
+            }
+            setShowRecordEntry(false)
+            setEditingRecord(null)
+          }}
+        />
+      )}
     </div>
   )
 }

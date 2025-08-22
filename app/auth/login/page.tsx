@@ -28,14 +28,14 @@ export default function LoginPage() {
     setDebugInfo("")
 
     try {
-      // 添加调试信息
+      // 检查用户是否存在
       const users = JSON.parse(localStorage.getItem("teacal_users") || "[]")
       const userExists = users.find((u: any) => u.username === username)
       
       if (userExists) {
-        setDebugInfo(`找到用户: ${username}，正在验证密码...`)
+        setDebugInfo(`欢迎回来，${username}！正在验证您的身份...`)
       } else {
-        setDebugInfo(`用户 ${username} 不存在，当前存储的用户: ${users.map((u: any) => u.username).join(", ") || "无"}`)
+        setDebugInfo(`正在验证用户 ${username}...`)
       }
 
       const result = await loginUser(username, password)
@@ -43,10 +43,17 @@ export default function LoginPage() {
       if (result.success) {
         // 存储用户信息到localStorage
         localStorage.setItem("currentUser", JSON.stringify(result.user))
-        setDebugInfo("登录成功！正在跳转...")
+        setDebugInfo(`欢迎回来，${username}！登录成功，正在跳转...`)
         router.push("/dashboard")
       } else {
-        setError(result.error || "登录失败")
+        // 如果用户存在但密码错误，显示友好的错误信息
+        if (userExists) {
+          setError("密码不正确，请重新输入")
+          setDebugInfo(`${username}，请检查您的密码是否正确`)
+        } else {
+          setError("用户名或密码错误")
+          setDebugInfo(`用户 ${username} 不存在，请检查用户名或前往注册`)
+        }
       }
     } catch (err) {
       setError("登录失败，请重试")

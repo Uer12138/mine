@@ -57,7 +57,120 @@ export async function checkTeaDatabaseConnection(): Promise<boolean> {
   }
 }
 
-// 搜索奶茶产品
+// 计算字符串相似度（简单的编辑距离算法）
+function calculateSimilarity(str1: string, str2: string): number {
+  const len1 = str1.length
+  const len2 = str2.length
+  const matrix = Array(len1 + 1).fill(null).map(() => Array(len2 + 1).fill(null))
+  
+  for (let i = 0; i <= len1; i++) matrix[i][0] = i
+  for (let j = 0; j <= len2; j++) matrix[0][j] = j
+  
+  for (let i = 1; i <= len1; i++) {
+    for (let j = 1; j <= len2; j++) {
+      const cost = str1[i - 1] === str2[j - 1] ? 0 : 1
+      matrix[i][j] = Math.min(
+        matrix[i - 1][j] + 1,
+        matrix[i][j - 1] + 1,
+        matrix[i - 1][j - 1] + cost
+      )
+    }
+  }
+  
+  const maxLen = Math.max(len1, len2)
+  return maxLen === 0 ? 1 : (maxLen - matrix[len1][len2]) / maxLen
+}
+
+// 智能搜索奶茶产品（支持多字段相似度匹配）
+export async function searchTeaProductsIntelligent(query: string, limit: number = 10): Promise<TeaProduct[]> {
+  try {
+    const supabase = getSupabaseClient()
+    
+    if (!query.trim()) {
+      // 如果没有查询词，返回热门奶茶
+      const { data, error } = await supabase
+        .from('tea_products')
+        .select('*')
+        .order('rating', { ascending: false })
+        .limit(limit)
+      
+      if (error) throw error
+      return data || []
+    }
+    
+    // 获取所有产品进行智能匹配
+    const { data: allProducts, error } = await supabase
+      .from('tea_products')
+      .select('*')
+    
+    if (error) throw error
+    if (!allProducts) return []
+    
+    // 分词处理（简单按空格和常见分隔符分割）
+    const queryTerms = query.toLowerCase().split(/[\s,，、]+/).filter(term => term.length > 0)
+    
+    // 计算每个产品的匹配分数
+    const scoredProducts = allProducts.map(product => {
+      let totalScore = 0
+      let matchCount = 0
+      
+      queryTerms.forEach(term => {
+        // 检查名称匹配
+        const nameScore = calculateSimilarity(term, product.name.toLowerCase())
+        if (nameScore > 0.3 || product.name.toLowerCase().includes(term)) {
+          totalScore += nameScore * 3 // 名称匹配权重最高
+          matchCount++
+        }
+        
+        // 检查品牌匹配
+        const brandScore = calculateSimilarity(term, product.brand.toLowerCase())
+        if (brandScore > 0.3 || product.brand.toLowerCase().includes(term)) {
+          totalScore += brandScore * 2 // 品牌匹配权重中等
+          matchCount++
+        }
+        
+        // 检查描述匹配
+        if (product.description) {
+          const descScore = calculateSimilarity(term, product.description.toLowerCase())
+          if (descScore > 0.3 || product.description.toLowerCase().includes(term)) {
+            totalScore += descScore * 1 // 描述匹配权重较低
+            matchCount++
+          }
+        }
+        
+        // 检查配料匹配
+        product.ingredients.forEach(ingredient => {
+          const ingredientScore = calculateSimilarity(term, ingredient.toLowerCase())
+          if (ingredientScore > 0.3 || ingredient.toLowerCase().includes(term)) {
+            totalScore += ingredientScore * 1.5 // 配料匹配权重中等
+            matchCount++
+          }
+        })
+      })
+      
+      // 计算最终分数（考虑匹配项数量和评分）
+      const finalScore = matchCount > 0 ? (totalScore / queryTerms.length) * (matchCount / queryTerms.length) * (product.rating / 5) : 0
+      
+      return {
+        ...product,
+        matchScore: finalScore
+      }
+    })
+    
+    // 过滤和排序结果
+    return scoredProducts
+      .filter(product => product.matchScore > 0.1) // 只返回有一定匹配度的结果
+      .sort((a, b) => b.matchScore - a.matchScore) // 按匹配分数降序排列
+      .slice(0, limit)
+      .map(({ matchScore, ...product }) => product) // 移除临时的matchScore字段
+      
+  } catch (error) {
+    console.error('Intelligent search failed:', error)
+    return []
+  }
+}
+
+// 搜索奶茶产品（保持向后兼容）
 export async function searchTeaProducts(query: string, limit: number = 10): Promise<TeaProduct[]> {
   try {
     const supabase = getSupabaseClient()

@@ -84,7 +84,20 @@ export async function getCurrentUserIdClient(): Promise<string> {
       }
     }
 
-    // Fallback to demo user ID stored in localStorage
+    // 如果没有 Supabase 连接，尝试从 localStorage 获取当前登录用户的 ID
+    const currentUser = localStorage.getItem("currentUser")
+    if (currentUser) {
+      try {
+        const user = JSON.parse(currentUser)
+        if (user?.id) {
+          return user.id
+        }
+      } catch (error) {
+        console.error("Error parsing current user:", error)
+      }
+    }
+
+    // 如果没有当前用户，返回一个默认的 demo UUID
     let demoUserId = localStorage.getItem("demo_user_id")
     if (!demoUserId) {
       demoUserId = generateDemoUUID()
@@ -93,7 +106,20 @@ export async function getCurrentUserIdClient(): Promise<string> {
     return demoUserId
   } catch (error) {
     console.error("Error getting user ID:", error)
-    // Return a consistent demo UUID
+    // 尝试从当前用户获取 ID
+    const currentUser = localStorage.getItem("currentUser")
+    if (currentUser) {
+      try {
+        const user = JSON.parse(currentUser)
+        if (user?.id) {
+          return user.id
+        }
+      } catch (error) {
+        console.error("Error parsing current user in fallback:", error)
+      }
+    }
+    
+    // 最后的回退方案
     let demoUserId = localStorage.getItem("demo_user_id")
     if (!demoUserId) {
       demoUserId = generateDemoUUID()

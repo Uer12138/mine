@@ -1,20 +1,20 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { X, Heart, Smile, Frown, Star, Search } from "lucide-react"
+import { X, Heart, Smile, Frown, Star } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent } from "@/components/ui/card"
 import { Textarea } from "@/components/ui/textarea"
-import { mockProducts } from "@/components/brand-search"
 import CupSizeSelector from './cup-size-selector'
 import SugarLevelCalculator from './sugar-level-calculator'
-import BrandSearch from './brand-search'
-import { searchTeaProducts, saveTeaRecord, checkTeaDatabaseConnection, TeaProduct } from '@/lib/tea-database'
+import { saveTeaRecord, TeaProduct } from '@/lib/tea-database'
 import { getCurrentUserIdClient } from '@/lib/supabase'
 
 interface RecordEntryProps {
   onClose: () => void
+  editingRecord?: any
+  onSave?: (record: any) => void
 }
 
 interface MilkTeaProduct {
@@ -46,18 +46,29 @@ function convertTeaProduct(product: TeaProduct): MilkTeaProduct {
   }
 }
 
-export default function RecordEntry({ onClose }: RecordEntryProps) {
-  const [drinkName, setDrinkName] = useState("")
+export default function RecordEntry({ onClose, editingRecord, onSave }: RecordEntryProps) {
+  const [customName, setCustomName] = useState("")
   const [selectedDrink, setSelectedDrink] = useState<MilkTeaProduct | null>(null)
-  const [matchedDrink, setMatchedDrink] = useState<MilkTeaProduct | null>(null)
-  const [searchResults, setSearchResults] = useState<MilkTeaProduct[]>([])
   const [cupSize, setCupSize] = useState<"small" | "medium" | "large">("medium")
   const [sugarLevel, setSugarLevel] = useState(50)
   const [mood, setMood] = useState("")
   const [notes, setNotes] = useState("")
   const [showBrandSearch, setShowBrandSearch] = useState(false)
-  const [isSupabaseConnected, setIsSupabaseConnected] = useState(false)
-  const [isSearching, setIsSearching] = useState(false)
+  const [inputMode, setInputMode] = useState<'search' | 'custom'>('custom')
+  const [isSaving, setIsSaving] = useState(false)
+  const [saveMessage, setSaveMessage] = useState('')
+  const [isComposing, setIsComposing] = useState(false)
+
+  // 初始化编辑模式的数据
+  useEffect(() => {
+    if (editingRecord) {
+      setCustomName(editingRecord.drinkName || '')
+      setCupSize(editingRecord.cupSize || 'medium')
+      setSugarLevel(editingRecord.sugarLevel || 50)
+      setMood(editingRecord.mood || '')
+      setNotes(editingRecord.notes || '')
+    }
+  }, [editingRecord])
 
   const moods = [
     { key: "happy", label: "开心", icon: <Heart className="w-5 h-5 text-red-500" /> },
@@ -66,63 +77,10 @@ export default function RecordEntry({ onClose }: RecordEntryProps) {
     { key: "disappointed", label: "失望", icon: <Frown className="w-5 h-5 text-gray-500" /> },
   ]
 
-  // 检查Supabase连接状态
-  useEffect(() => {
-    checkTeaDatabaseConnection().then(setIsSupabaseConnected)
-  }, [])
 
-  // 搜索奶茶产品
-  useEffect(() => {
-    const searchProducts = async () => {
-      if (drinkName.trim()) {
-        setIsSearching(true)
-        
-        let results: MilkTeaProduct[] = []
-        
-        if (isSupabaseConnected) {
-          // 使用数据库搜索
-          try {
-            const dbResults = await searchTeaProducts(drinkName, 5)
-            results = dbResults.map(convertTeaProduct)
-          } catch (error) {
-            console.error('Database search failed, falling back to mock data:', error)
-            // 如果数据库搜索失败，回退到本地数据
-            results = mockProducts.filter(product => 
-              product.name.toLowerCase().includes(drinkName.toLowerCase()) ||
-              product.brand.toLowerCase().includes(drinkName.toLowerCase())
-            ).slice(0, 5)
-          }
-        } else {
-          // 使用本地mock数据搜索
-          results = mockProducts.filter(product => 
-            product.name.toLowerCase().includes(drinkName.toLowerCase()) ||
-            product.brand.toLowerCase().includes(drinkName.toLowerCase())
-          ).slice(0, 5)
-        }
-        
-        setSearchResults(results)
-        
-        if (results.length === 1) {
-          setMatchedDrink(results[0])
-        } else {
-          setMatchedDrink(null)
-        }
-        
-        setIsSearching(false)
-      } else {
-        setSearchResults([])
-        setMatchedDrink(null)
-      }
-    }
-    
-    searchProducts()
-  }, [drinkName, isSupabaseConnected])
 
   const handleSelectDrink = (drink: MilkTeaProduct) => {
     setSelectedDrink(drink)
-    setDrinkName(drink.name)
-    setSearchResults([])
-    setMatchedDrink(null)
   }
 
   const calculateTotalCalories = () => {
@@ -140,30 +98,49 @@ export default function RecordEntry({ onClose }: RecordEntryProps) {
   }
 
   const handleSubmit = async () => {
-    const recordData = {
-      drinkName: selectedDrink?.name || matchedDrink?.name || drinkName,
-      brand: selectedDrink?.brand || matchedDrink?.brand || "未知品牌",
-      calories: calculateTotalCalories() || matchedDrink?.calories || 0,
-      cupSize,
-      sugarLevel: getSugarLevelName(sugarLevel),
-      mood,
-      notes,
-      date: new Date().toISOString().split('T')[0],
-      timestamp: new Date().toISOString()
-    }
+    setIsSaving(true)
+    setSaveMessage('')
+    
+    try {
+      const finalDrinkName = customName
+      const estimatedCalories = 200 // 自定义奶茶默认200卡路里
+      
+      const recordData = {
+        id: editingRecord?.id || Date.now().toString(),
+        drinkName: finalDrinkName,
+        brand: '自定义',
+        calories: estimatedCalories,
+        cupSize,
+        sugarLevel: getSugarLevelName(sugarLevel),
+        mood,
+        notes,
+        date: editingRecord?.date || new Date().toISOString().split('T')[0],
+        timestamp: editingRecord?.timestamp || new Date().toISOString()
+      }
 
-    if (isSupabaseConnected) {
+      // 如果有onSave回调，使用它来处理保存逻辑
+      if (onSave) {
+        onSave(recordData)
+        setSaveMessage(editingRecord ? '记录已更新！' : '记录已保存！')
+        setTimeout(() => {
+          setIsSaving(false)
+          onClose()
+        }, 1500)
+        return
+      }
+
+      // 否则使用原有的保存逻辑
       // 尝试保存到数据库
       try {
         const userId = await getCurrentUserIdClient()
         const teaRecord = {
           user_id: userId,
-          tea_product_id: selectedDrink ? parseInt(selectedDrink.id) : undefined,
-          custom_name: (!selectedDrink && !matchedDrink) ? drinkName : undefined,
+          tea_product_id: undefined,
+          custom_name: customName,
           tea_name: recordData.drinkName,
           size: cupSize,
           sweetness_level: recordData.sugarLevel,
-          toppings: selectedDrink?.ingredients || matchedDrink?.ingredients || [],
+          toppings: [],
           estimated_calories: recordData.calories,
           mood: mood || undefined,
           notes: notes || undefined,
@@ -173,25 +150,45 @@ export default function RecordEntry({ onClose }: RecordEntryProps) {
         const savedRecord = await saveTeaRecord(teaRecord)
         if (savedRecord) {
           console.log('Record saved to database:', savedRecord)
-          onClose()
+          setSaveMessage('记录已成功保存到数据库！')
+          setTimeout(() => {
+            setIsSaving(false)
+            onClose()
+          }, 1500)
           return
         }
       } catch (error) {
         console.error('Failed to save to database, falling back to localStorage:', error)
+        setSaveMessage('数据库保存失败，使用本地存储...')
       }
+      
+      // 如果数据库保存失败或未连接，使用localStorage
+      const existingRecords = JSON.parse(localStorage.getItem('teaRecords') || '[]')
+      let updatedRecords
+      
+      if (editingRecord) {
+        // 编辑模式：更新现有记录
+        updatedRecords = existingRecords.map((record: any) => 
+          record.id === editingRecord.id ? recordData : record
+        )
+      } else {
+        // 新增模式：添加新记录
+        updatedRecords = [recordData, ...existingRecords]
+      }
+      
+      localStorage.setItem('teaRecords', JSON.stringify(updatedRecords))
+      
+      setSaveMessage(editingRecord ? '记录已更新！' : '记录已保存到本地存储！')
+      setTimeout(() => {
+        setIsSaving(false)
+        onClose()
+      }, 1500)
+      
+    } catch (error) {
+      console.error('保存失败:', error)
+      setSaveMessage('保存失败，请重试')
+      setIsSaving(false)
     }
-    
-    // 如果数据库保存失败或未连接，使用localStorage
-    const localRecord = {
-      id: Date.now().toString(),
-      ...recordData
-    }
-    
-    const existingRecords = JSON.parse(localStorage.getItem('teaRecords') || '[]')
-    const updatedRecords = [localRecord, ...existingRecords]
-    localStorage.setItem('teaRecords', JSON.stringify(updatedRecords))
-    
-    onClose()
   }
 
   const getSugarLevelName = (percentage: number) => {
@@ -236,65 +233,30 @@ export default function RecordEntry({ onClose }: RecordEntryProps) {
 
           <div className="p-6 space-y-6">
             <div>
-              <div className="flex items-center justify-between mb-3">
+              <div className="mb-3">
                 <h3 className="font-medium">奶茶名称</h3>
-                <div className="flex items-center gap-2 text-xs">
-                  <div className={`w-2 h-2 rounded-full ${
-                    isSupabaseConnected ? 'bg-green-500' : 'bg-yellow-500'
-                  }`} />
-                  <span className="text-gray-500">
-                    {isSupabaseConnected ? '数据库已连接' : '本地模式'}
-                  </span>
+              </div>
+              <div className="space-y-4">
+                {/* 自定义模式 */}
+                <div>
+                  <Input
+                    placeholder="输入自定义奶茶名称（如：自制珍珠奶茶、星巴克焦糖玛奇朵等）"
+                    value={customName}
+                    onChange={(e) => setCustomName(e.target.value)}
+                    onCompositionStart={() => setIsComposing(true)}
+                    onCompositionEnd={() => setIsComposing(false)}
+                    className="border-mint/30"
+                    autoComplete="off"
+                    spellCheck={false}
+                    autoCorrect="off"
+                    autoCapitalize="off"
+                    inputMode="text"
+                    lang="zh-CN"
+                  />
                 </div>
               </div>
-              <div className="relative">
-                <Search className={`absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 ${
-                  isSearching ? 'text-blue-500 animate-pulse' : 'text-gray-400'
-                }`} />
-                <Input
-                  placeholder={isSupabaseConnected ? "搜索数据库中的奶茶..." : "输入奶茶名称..."}
-                  value={drinkName}
-                  onChange={(e) => setDrinkName(e.target.value)}
-                  className="pl-10 border-mint/30"
-                  disabled={isSearching}
-                />
-                {isSearching && (
-                  <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
-                    <div className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
-                  </div>
-                )}
-              </div>
 
-              {searchResults.length > 0 && (
-                <div className="mt-2 p-3 bg-yellow-50 border border-yellow-200 rounded-lg text-sm">
-                  <p className="text-yellow-800">
-                    <span className="font-medium">热量参考:</span> {searchResults[0].calories}kcal ({searchResults[0].brand})
-                  </p>
-                  {searchResults.length > 1 && (
-                    <p className="text-yellow-700 mt-1">
-                      找到多个匹配结果，请从列表中选择具体的奶茶以获取准确热量
-                    </p>
-                  )}
-                </div>
-              )}
 
-              {searchResults.length > 0 && (
-                <div className="mt-2 border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-y-auto bg-white z-10">
-                  {searchResults.map((drink) => (
-                    <div
-                      key={drink.id}
-                      className="p-3 hover:bg-mint/10 cursor-pointer flex items-center justify-between"
-                      onClick={() => handleSelectDrink(drink)}
-                    >
-                      <div>
-                        <p className="font-medium">{drink.name}</p>
-                        <p className="text-xs text-gray-500">{drink.brand}</p>
-                      </div>
-                      <div className="font-bold text-mint-dark">{drink.calories}kcal</div>
-                    </div>
-                  ))}
-                </div>
-              )}
             </div>
 
             <div>
@@ -302,27 +264,27 @@ export default function RecordEntry({ onClose }: RecordEntryProps) {
                 onClick={() => setShowBrandSearch(true)}
                 className="w-full border-mint/30 bg-transparent hover:bg-mint/5"
               >
-                {selectedDrink || matchedDrink ? `已选择: ${selectedDrink?.name || matchedDrink?.name}` : "选择奶茶"}
+                {selectedDrink ? `已选择: ${selectedDrink?.name}` : "选择奶茶"}
               </Button>
             </div>
 
-            {(selectedDrink || matchedDrink) && (
+            {selectedDrink && (
               <Card className="border-mint/20 bg-mint/5 mt-4">
                 <CardContent className="p-4">
                   <div className="flex items-center justify-between">
                     <div>
-                      <h4 className="font-semibold">{selectedDrink?.name || matchedDrink?.name}</h4>
+                      <h4 className="font-semibold">{selectedDrink.name}</h4>
                       <p className="text-sm text-gray-600">
-                        {selectedDrink?.brand || matchedDrink?.brand}
+                        {selectedDrink.brand}
                       </p>
                     </div>
-                    <div className="text-2xl font-bold text-mint-dark">{calculateTotalCalories() || matchedDrink?.calories || 0}kcal</div>
+                    <div className="text-2xl font-bold text-mint-dark">{calculateTotalCalories() || 0}kcal</div>
                   </div>
                 </CardContent>
               </Card>
             )}
 
-            {(selectedDrink || matchedDrink) && (
+            {selectedDrink && (
               <div>
                 <h3 className="font-medium mb-3 mt-6">选择杯型</h3>
                 <CupSizeSelector
@@ -332,7 +294,7 @@ export default function RecordEntry({ onClose }: RecordEntryProps) {
               </div>
             )}
 
-            {(selectedDrink || matchedDrink) && (
+            {selectedDrink && (
               <div>
                 <h3 className="font-medium mb-3 mt-6">选择糖度</h3>
                 <SugarLevelCalculator
@@ -380,11 +342,19 @@ export default function RecordEntry({ onClose }: RecordEntryProps) {
               </Button>
               <Button
                 onClick={handleSubmit}
-                disabled={!drinkName.trim() && !selectedDrink && !matchedDrink}
+                disabled={isSaving || !customName.trim()}
                 className="flex-1 bg-mint hover:bg-mint-dark text-white"
               >
-                完成记录
+                {isSaving ? '保存中...' : '完成记录'}
               </Button>
+              
+              {saveMessage && (
+                <div className={`mt-2 p-2 rounded text-sm text-center ${
+                  saveMessage.includes('失败') ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'
+                }`}>
+                  {saveMessage}
+                </div>
+              )}
             </div>
           </div>
         </div>
