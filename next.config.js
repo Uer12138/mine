@@ -15,8 +15,7 @@ const nextConfig = {
     minimumCacheTTL: 60,
   },
   
-  // 构建优化
-  swcMinify: true,
+  // 构建优化 - swcMinify 在 Next.js 15 中已默认启用
   
   // 输出配置
   output: 'standalone',

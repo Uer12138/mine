@@ -12,14 +12,31 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 
 export default function HomePage() {
   const router = useRouter()
+  const [isChecking, setIsChecking] = useState(true)
 
   useEffect(() => {
     // 检查是否已登录，如果已登录则跳转到dashboard
     const currentUser = localStorage.getItem("currentUser")
     if (currentUser) {
-      router.push("/dashboard")
+      // 添加延迟避免立即跳转导致的错误
+      setTimeout(() => {
+        router.push("/dashboard")
+      }, 100)
     }
+    setIsChecking(false)
   }, [router])
+
+  // 如果正在检查登录状态，显示加载状态
+  if (isChecking) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-[#A8DADC] to-[#F8F9FA] flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#A8DADC] mx-auto mb-4"></div>
+          <p className="text-gray-600">加载中...</p>
+        </div>
+      </div>
+    )
+  }
 
   const handleGoToAuth = () => {
     router.push("/auth/login")
