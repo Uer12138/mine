@@ -1,0 +1,169 @@
+"use client"
+
+import type React from "react"
+
+import { useState } from "react"
+import { useRouter } from "next/navigation"
+import Link from "next/link"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { loginUser, clearOldUserData } from "@/lib/auth"
+
+export default function LoginPage() {
+  const [username, setUsername] = useState("")
+  const [password, setPassword] = useState("")
+  const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState("")
+  const [needsClearData, setNeedsClearData] = useState(false)
+  const [debugInfo, setDebugInfo] = useState("")
+  const router = useRouter()
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setIsLoading(true)
+    setError("")
+    setNeedsClearData(false)
+    setDebugInfo("")
+
+    try {
+      // 添加调试信息
+      const users = JSON.parse(localStorage.getItem("teacal_users") || "[]")
+      const userExists = users.find((u: any) => u.username === username)
+      
+      if (userExists) {
+        setDebugInfo(`找到用户: ${username}，正在验证密码...`)
+      } else {
+        setDebugInfo(`用户 ${username} 不存在，当前存储的用户: ${users.map((u: any) => u.username).join(", ") || "无"}`)
+      }
+
+      const result = await loginUser(username, password)
+
+      if (result.success) {
+        // 存储用户信息到localStorage
+        localStorage.setItem("currentUser", JSON.stringify(result.user))
+        setDebugInfo("登录成功！正在跳转...")
+        router.push("/dashboard")
+      } else {
+        setError(result.error || "登录失败")
+      }
+    } catch (err) {
+      setError("登录失败，请重试")
+      console.error("登录错误:", err)
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const handleClearData = () => {
+    clearOldUserData()
+    setNeedsClearData(false)
+    setError("")
+    setUsername("")
+    setPassword("")
+    setDebugInfo("")
+    alert("旧数据已清除，请重新注册账户")
+    router.push("/auth/register")
+  }
+
+  const handleDebug = () => {
+    const users = JSON.parse(localStorage.getItem("teacal_users") || "[]")
+    const currentUser = localStorage.getItem("currentUser")
+    
+    const debugText = `
+调试信息:
+- 存储的用户数量: ${users.length}
+- 用户名列表: ${users.map((u: any) => u.username).join(", ") || "无"}
+- 当前登录状态: ${currentUser ? "已登录" : "未登录"}
+- 当前输入用户名: ${username}
+    `.trim()
+    
+    setDebugInfo(debugText)
+    console.log("调试信息:", debugText)
+  }
+
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-pink-50 to-purple-50">
+      <Card className="w-full max-w-md">
+        <CardHeader className="text-center">
+          <CardTitle className="text-2xl font-bold text-gray-900">欢迎回来</CardTitle>
+          <CardDescription className="text-gray-600">登录您的奶茶卡路里管理账户</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="username">用户名</Label>
+              <Input
+                id="username"
+                type="text"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                placeholder="请输入用户名"
+                required
+                disabled={isLoading}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="password">密码</Label>
+              <Input
+                id="password"
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="请输入密码"
+                required
+                disabled={isLoading}
+              />
+            </div>
+
+            {error && <div className="text-red-500 text-sm text-center">{error}</div>}
+            {debugInfo && (
+              <div className="text-blue-600 text-sm bg-blue-50 p-3 rounded-lg whitespace-pre-line">
+                {debugInfo}
+              </div>
+            )}
+
+            {needsClearData && (
+              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 text-center">
+                <p className="text-sm text-yellow-800 mb-3">检测到数据格式不兼容，这可能是由于系统更新导致的。</p>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={handleClearData}
+                  className="w-full border-yellow-300 text-yellow-800 hover:bg-yellow-100 bg-transparent"
+                >
+                  清除旧数据并重新注册
+                </Button>
+              </div>
+            )}
+
+            <div className="flex space-x-2">
+              <Button type="submit" className="flex-1" disabled={isLoading}>
+                {isLoading ? "登录中..." : "登录"}
+              </Button>
+              <Button 
+                type="button" 
+                variant="outline" 
+                onClick={handleDebug}
+                className="px-3"
+                title="调试信息"
+              >
+                🔍
+              </Button>
+            </div>
+          </form>
+
+          <div className="mt-6 text-center">
+            <p className="text-sm text-gray-600">
+              还没有账户？{" "}
+              <Link href="/auth/register" className="text-purple-600 hover:text-purple-700 font-medium">
+                立即注册
+              </Link>
+            </p>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  )
+}

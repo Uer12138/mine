@@ -1,0 +1,25 @@
+diff --git a/node_modules/@radix-ui/react-select/dist/index.mjs b/node_modules/@radix-ui/react-select/dist/index.mjs
+index 1a2b3c4..5d6e7f8 100644
+--- a/node_modules/@radix-ui/react-select/dist/index.mjs
++++ b/node_modules/@radix-ui/react-select/dist/index.mjs
+@@ -23,7 +23,17 @@ import { useLayoutEffect } from "@radix-ui/react-use-layout-effect";
+ import { usePrevious } from "@radix-ui/react-use-previous";
+ import { VISUALLY_HIDDEN_STYLES } from "@radix-ui/react-visually-hidden";
+ import { hideOthers } from "aria-hidden";
+-
++// 手动定义 VISUALLY_HIDDEN_STYLES 常量
++const VISUALLY_HIDDEN_STYLES = {
++  position: 'absolute',
++  border: 0,
++  width: 1,
++  height: 1,
++  padding: 0,
++  margin: -1,
++  overflow: 'hidden',
++  clip: 'rect(0, 0, 0, 0)',
++  whiteSpace: 'nowrap',
++  wordWrap: 'normal',
++};
+ import { RemoveScroll } from "react-remove-scroll";
+ import { Fragment, jsx, jsxs } from "react/jsx-runtime";
+ var OPEN_KEYS = [" ", "Enter", "ArrowUp", "ArrowDown"];

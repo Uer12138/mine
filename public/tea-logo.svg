@@ -1,0 +1,57 @@
+<svg width="200" height="200" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+  <!-- Cup body (exact match to original) -->
+  <path d="M 65 90 L 65 150 Q 65 165 80 165 L 120 165 Q 135 165 135 150 L 135 90 Z" fill="#E8F5F3" stroke="#4A9B8E" stroke-width="4"/>
+  
+  <!-- Cup top opening -->
+  <ellipse cx="100" cy="90" rx="35" ry="12" fill="#F0F8F6" stroke="#4A9B8E" stroke-width="4"/>
+  
+  <!-- Cup lid -->
+  <ellipse cx="100" cy="85" rx="32" ry="10" fill="#B8E6D3" stroke="#4A9B8E" stroke-width="3"/>
+  
+  <!-- Tea liquid -->
+  <path d="M 70 95 L 70 145 Q 70 158 83 158 L 117 158 Q 130 158 130 145 L 130 95 Z" fill="#C8E6C9" opacity="0.8"/>
+  
+  <!-- Straw -->
+  <rect x="85" y="30" width="6" height="60" fill="#4A9B8E" rx="3"/>
+  
+  <!-- Leaf on straw -->
+  <ellipse cx="96" cy="45" rx="10" ry="6" fill="#7BC4A4" stroke="#4A9B8E" stroke-width="2" transform="rotate(-25 96 45)"/>
+  
+  <!-- Measuring tape background -->
+  <rect x="45" y="115" width="110" height="15" fill="#FFFFFF" stroke="#4A9B8E" stroke-width="3" rx="4"/>
+  
+  <!-- Measurement marks -->
+  <g stroke="#4A9B8E" stroke-width="1">
+    <line x1="55" y1="115" x2="55" y2="130"/>
+    <line x1="65" y1="115" x2="65" y2="125"/>
+    <line x1="75" y1="115" x2="75" y2="130"/>
+    <line x1="85" y1="115" x2="85" y2="125"/>
+    <line x1="95" y1="115" x2="95" y2="130"/>
+    <line x1="105" y1="115" x2="105" y2="125"/>
+    <line x1="115" y1="115" x2="115" y2="130"/>
+    <line x1="125" y1="115" x2="125" y2="125"/>
+    <line x1="135" y1="115" x2="135" y2="130"/>
+    <line x1="145" y1="115" x2="145" y2="125"/>
+  </g>
+  
+  <!-- Happy faces -->
+  <g fill="#4A9B8E">
+    <!-- Face 1 -->
+    <circle cx="68" cy="122" r="2.5"/>
+    <circle cx="77" cy="122" r="2.5"/>
+    <path d="M 65 126 Q 72.5 129 80 126" stroke="#4A9B8E" stroke-width="2" fill="none"/>
+    
+    <!-- Face 2 -->
+    <circle cx="97" cy="122" r="2.5"/>
+    <circle cx="106" cy="122" r="2.5"/>
+    <path d="M 94 126 Q 101.5 129 109 126" stroke="#4A9B8E" stroke-width="2" fill="none"/>
+    
+    <!-- Face 3 -->
+    <circle cx="126" cy="122" r="2.5"/>
+    <circle cx="135" cy="122" r="2.5"/>
+    <path d="M 123 126 Q 130.5 129 138 126" stroke="#4A9B8E" stroke-width="2" fill="none"/>
+  </g>
+  
+  <!-- Brand name -->
+  <text x="100" y="185" font-family="Arial, sans-serif" font-size="20" font-weight="bold" text-anchor="middle" fill="#4A9B8E">轻茶纪</text>
+</svg>

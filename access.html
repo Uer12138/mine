@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TeaCal 访问页面</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #f5f5f5;
+        }
+        .container {
+            text-align: center;
+            padding: 2rem;
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+        a {
+            display: inline-block;
+            margin-top: 1rem;
+            padding: 0.75rem 1.5rem;
+            background-color: #0070f3;
+            color: white;
+            text-decoration: none;
+            border-radius: 4px;
+            font-weight: bold;
+            transition: background-color 0.2s;
+        }
+        a:hover {
+            background-color: #0051a2;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>TeaCal 网站访问</h1>
+        <p>点击下方链接访问 TeaCal 网站：</p>
+        <a href="http://localhost:3000">访问 TeaCal</a>
+        <p style="margin-top: 2rem; color: #666;">如果链接无法正常工作，请确保服务器已启动，并检查端口是否为 3000</p>
+    </div>
+</body>
+</html>

@@ -1,0 +1,61 @@
+"use client"
+
+import { useState, useEffect } from "react"
+import PersonalizedRecommendations from "@/components/personalized-recommendations"
+import { Button } from "@/components/ui/button"
+import { Heart } from "lucide-react"
+
+interface UserPreferences {
+  favoriteBrands: string[]
+  minSweetness: number
+  dislikedIngredients: string[]
+  healthGoals: string[]
+}
+
+export default function RecommendationsPage() {
+  const [userPreferences, setUserPreferences] = useState<UserPreferences | null>(null)
+
+  useEffect(() => {
+    // 从localStorage读取用户信息和偏好
+    const currentUser = localStorage.getItem("currentUser")
+    if (currentUser) {
+      const user = JSON.parse(currentUser)
+      
+      // 构建用户偏好对象
+      const preferences: UserPreferences = {
+        favoriteBrands: user.favorite_brands || [],
+        minSweetness: user.sweetness_preference === "low" ? 30 : 
+                     user.sweetness_preference === "medium" ? 50 : 70,
+        dislikedIngredients: [], // 可以后续扩展
+        healthGoals: ["控制热量摄入", "减少糖分"] // 默认健康目标
+      }
+      
+      setUserPreferences(preferences)
+    }
+  }, [])
+
+  return (
+    <div className="min-h-screen bg-cream">
+      {/* Header */}
+      <header className="bg-white shadow-sm border-b border-mint/20">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between h-16">
+            <div className="flex items-center space-x-4">
+              <Button variant="ghost" onClick={() => (window.location.href = "/dashboard")}>
+                ← 返回首页
+              </Button>
+              <div className="flex items-center space-x-2">
+                <Heart className="w-6 h-6 text-mint" />
+                <h1 className="text-xl font-bold text-gray-800">个性化推荐</h1>
+              </div>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <PersonalizedRecommendations userPreferences={userPreferences || undefined} />
+      </div>
+    </div>
+  )
+}
