@@ -9943,7 +9943,7 @@ export default function BrandSearch({ selectedIngredients = {}, onIngredientsCha
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2 gap-3 sm:gap-4">
-          {filteredProducts.map((product) => (
+          {filteredProducts.sort((a, b) => a.calories - b.calories).map((product) => (
             <Card key={product.id} className={`border-mint/20 hover:shadow-md transition-shadow cursor-pointer ${selectedProduct?.id === product.id ? 'border-mint-dark border-2 shadow-lg' : ''}`} onClick={() => handleSelectProduct(product)}>
               <CardContent className="p-3 sm:p-4">
                 <div className="flex items-start justify-between mb-3">
