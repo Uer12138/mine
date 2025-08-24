@@ -33,6 +33,7 @@ const EXERCISE_BASE_100KCAL: ExerciseComparison[] = [
   { name: "跳绳", duration: 10, unit: "分钟" },
   { name: "爬楼梯", duration: 10, unit: "分钟" },
   { name: "跑步", duration: 20, unit: "分钟" },
+  { name: "大扫除", duration: 30, unit: "分钟" },
   { name: "站立", duration: 100, unit: "分钟" },
   { name: "慢走", duration: 50, unit: "分钟" }
 ]
@@ -89,13 +90,19 @@ function formatAmount(multipliedAmount: number, originalAmount: string): string 
   const roundedAmount = Math.round(multipliedAmount * 10) / 10
   
   if (originalAmount.includes("半")) {
+    // 白米饭的基准是"半碗"，所以multipliedAmount=1时应该显示"半碗"
     if (roundedAmount < 0.5) {
-      return `${roundedAmount}碗`
+      return `${Math.round(roundedAmount * 10) / 10}碗`
     } else if (roundedAmount === 0.5) {
+      return "1/4碗"
+    } else if (roundedAmount === 1) {
       return "半碗"
+    } else if (roundedAmount === 2) {
+      return "1碗"
+    } else if (roundedAmount < 2) {
+      return `${Math.round(roundedAmount * 0.5 * 10) / 10}碗`
     } else {
-      const bowls = Math.round(roundedAmount * 2) / 2
-      return `${bowls}碗`
+      return `${Math.round(roundedAmount * 0.5 * 10) / 10}碗`
     }
   } else if (originalAmount.includes("片")) {
     return `${roundedAmount}片`
