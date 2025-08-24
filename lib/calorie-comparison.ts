@@ -56,7 +56,16 @@ export function calculateCalorieComparison(calories: number): CalorieComparison 
 
   // 计算食物等价量
   const foodEquivalents: FoodComparison[] = FOOD_BASE_100KCAL.map(food => {
-    const multipliedAmount = parseFloat(food.amount.replace(/[^0-9.]/g, '')) * ratio
+    // 对于"半碗"这种情况，需要特殊处理
+    let baseAmount = 0.5 // 默认为半碗
+    if (food.amount.includes("半")) {
+      baseAmount = 0.5
+    } else {
+      const extracted = parseFloat(food.amount.replace(/[^0-9.]/g, ''))
+      baseAmount = isNaN(extracted) ? 1 : extracted
+    }
+    
+    const multipliedAmount = baseAmount * ratio
     const multipliedWeight = parseFloat(food.weight.replace(/[^0-9.]/g, '')) * ratio
     
     return {
