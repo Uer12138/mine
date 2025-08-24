@@ -170,7 +170,7 @@ export default function RecordEntry({ onClose, editingRecord, onSave }: RecordEn
           custom_name: selectedDrink ? undefined : customName,
           tea_name: recordData.drinkName,
           size: cupSize,
-          sweetness_level: sugarLevel,
+          sweetness_level: sugarLevel.toString(),
           toppings: selectedToppings.map(t => t.name),
           estimated_calories: recordData.calories,
           mood: mood || undefined,
