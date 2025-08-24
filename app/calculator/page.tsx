@@ -57,7 +57,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 
 import BrandSearch from "@/components/brand-search"
 import IngredientSelector from "@/components/ingredient-selector"
-import SmartRecommendations from "@/components/smart-recommendations"
 
 
 export default function CalculatorPage() {
@@ -179,15 +178,8 @@ export default function CalculatorPage() {
                   setSelectedDrink(drink);
                 }}
                 onSearchChange={setSearchQuery}
+                searchQuery={searchQuery}
               />
-              
-              {/* 智能推荐模块 */}
-               <SmartRecommendations
-                 searchQuery={searchQuery}
-                 onDrinkSelect={(drink) => {
-                   setSelectedDrink(drink);
-                 }}
-               />
               
               {/* 添加配料模块 */}
               <Card className="border-mint/20">

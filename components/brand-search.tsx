@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import SmartRecommendations from "@/components/smart-recommendations"
 
 interface MilkTeaProduct {
   id: string
@@ -26,6 +27,7 @@ interface BrandSearchProps {
   onIngredientsChange?: (ingredients: Record<string, number>) => void
   onDrinkSelect?: (drink: MilkTeaProduct) => void
   onSearchChange?: (query: string) => void
+  searchQuery?: string
 }
 
 // 计算字符串相似度（简单的编辑距离算法）
@@ -9710,7 +9712,7 @@ export const mockProducts: MilkTeaProduct[] = [
   },
 ]
 
-export default function BrandSearch({ selectedIngredients = {}, onIngredientsChange, onDrinkSelect, onSearchChange }: BrandSearchProps) {
+export default function BrandSearch({ selectedIngredients = {}, onIngredientsChange, onDrinkSelect, onSearchChange, searchQuery }: BrandSearchProps) {
   const [searchTerm, setSearchTerm] = useState("")
   const [selectedBrand, setSelectedBrand] = useState("all")
   const [calorieFilter, setCalorieFilter] = useState("all")
@@ -9920,6 +9922,14 @@ export default function BrandSearch({ selectedIngredients = {}, onIngredientsCha
           </div>
         </CardContent>
       </Card>
+
+      {/* 智能推荐模块 */}
+      {searchQuery && (
+        <SmartRecommendations
+          searchQuery={searchQuery}
+          onDrinkSelect={onDrinkSelect}
+        />
+      )}
 
       {/* Results */}
       <div className="space-y-4">
