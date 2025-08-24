@@ -51,18 +51,42 @@ export default function SmartRecommendations({ searchQuery, onDrinkSelect }: Sma
     )
 
     // 找到兼具口味和低卡的选择（综合评分算法）
-    const balanced = searchResults
-      .filter(product => product.id !== lowestCalorie.id) // 排除最低卡的选择
-      .map(product => {
-        // 计算综合评分：评分权重40%，低卡权重60%
-        const ratingScore = (product.rating / 5) * 0.4
-        const calorieScore = (1 - (product.calories / Math.max(...searchResults.map(p => p.calories)))) * 0.6
-        return {
-          ...product,
-          balanceScore: ratingScore + calorieScore
-        }
-      })
-      .sort((a, b) => b.balanceScore - a.balanceScore)[0]
+    let balanced = null
+    const filteredResults = searchResults.filter(product => product.id !== lowestCalorie.id)
+    
+    if (filteredResults.length > 0) {
+      const maxCalories = Math.max(...searchResults.map(p => p.calories))
+      const minCalories = Math.min(...searchResults.map(p => p.calories))
+      const calorieRange = maxCalories - minCalories || 1
+      
+      balanced = filteredResults
+        .map(product => {
+          // 改进的综合评分算法：评分权重50%，热量权重30%，品牌多样性权重20%
+          const ratingScore = (product.rating / 5) * 0.5
+          const calorieScore = (1 - ((product.calories - minCalories) / calorieRange)) * 0.3
+          // 品牌多样性：如果品牌与最低卡选择不同，给予额外分数
+          const brandDiversityScore = (product.brand !== lowestCalorie.brand ? 0.2 : 0)
+          
+          return {
+            ...product,
+            balanceScore: ratingScore + calorieScore + brandDiversityScore
+          }
+        })
+        .sort((a, b) => b.balanceScore - a.balanceScore)[0]
+    }
+    
+    // 如果没有找到不同的产品，尝试找到热量稍高但评分更好的选择
+    if (!balanced && searchResults.length > 1) {
+      balanced = searchResults
+        .filter(product => product.id !== lowestCalorie.id)
+        .sort((a, b) => {
+          // 优先选择评分更高的，然后是热量较低的
+          if (Math.abs(a.rating - b.rating) > 0.1) {
+            return b.rating - a.rating
+          }
+          return a.calories - b.calories
+        })[0]
+    }
 
     setRecommendations({
       lowestCalorie,
