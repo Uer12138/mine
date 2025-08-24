@@ -10,6 +10,7 @@ import { HotRankings } from "@/components/hot-rankings"
 import { AiAssistant } from "@/components/ai-assistant"
 import { ChevronDown, ChevronUp } from "lucide-react"
 
+
 export default function DashboardPage() {
   // 小贴士数据
   const tips = [
@@ -30,6 +31,8 @@ export default function DashboardPage() {
   const [user, setUser] = useState<any>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [isCalorieTableCollapsed, setIsCalorieTableCollapsed] = useState(true)
+  const [weeklyBudget, setWeeklyBudget] = useState(2000)
+  const [weeklyCalories, setWeeklyCalories] = useState(0)
   const router = useRouter()
   
   // 随机选择小贴士
@@ -53,8 +56,81 @@ export default function DashboardPage() {
       return
     }
     setUser(JSON.parse(currentUser))
+    
+    // 加载预算设置
+    const savedBudget = localStorage.getItem("weeklyBudget")
+    if (savedBudget) {
+      setWeeklyBudget(parseInt(savedBudget))
+    }
+    
+    // 计算本周卡路里
+    calculateWeeklyCalories()
+    
     setIsLoading(false)
   }, [router])
+
+  // 监听记录更新事件
+  useEffect(() => {
+    const handleRecordUpdate = () => {
+      calculateWeeklyCalories()
+    }
+
+    // 监听自定义事件
+    window.addEventListener('recordUpdated', handleRecordUpdate)
+    
+    // 监听localStorage变化
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === 'teaRecords') {
+        calculateWeeklyCalories()
+      }
+    }
+    
+    window.addEventListener('storage', handleStorageChange)
+    
+    return () => {
+      window.removeEventListener('recordUpdated', handleRecordUpdate)
+      window.removeEventListener('storage', handleRecordUpdate)
+    }
+  }, [])
+
+  // 计算本周卡路里摄入
+  const calculateWeeklyCalories = () => {
+    try {
+      const savedRecords = localStorage.getItem("teaRecords")
+      if (savedRecords) {
+        const records = JSON.parse(savedRecords)
+        const now = new Date()
+        const startOfWeek = new Date(now)
+        startOfWeek.setDate(now.getDate() - now.getDay())
+        startOfWeek.setHours(0, 0, 0, 0)
+        
+        const endOfWeek = new Date(startOfWeek)
+        endOfWeek.setDate(startOfWeek.getDate() + 6)
+        endOfWeek.setHours(23, 59, 59, 999)
+        
+        const weeklyRecords = records.filter((record: any) => {
+          const recordDate = new Date(record.timestamp)
+          return recordDate >= startOfWeek && recordDate <= endOfWeek
+        })
+        
+        const totalCalories = weeklyRecords.reduce((sum: number, record: any) => {
+          return sum + (record.calories || 0)
+        }, 0)
+        
+        setWeeklyCalories(totalCalories)
+      }
+    } catch (error) {
+      console.error("计算本周卡路里失败:", error)
+    }
+  }
+
+  // 处理预算变更
+  const handleBudgetChange = (newBudget: number) => {
+     setWeeklyBudget(newBudget)
+     localStorage.setItem('weeklyCalorieBudget', newBudget.toString())
+   }
+
+
 
   const handleLogout = () => {
     localStorage.removeItem("currentUser")
@@ -135,12 +211,13 @@ export default function DashboardPage() {
 
       {/* Main Content */}
       <div className="container mx-auto px-4 pb-16">
-        <div className="max-w-4xl mx-auto">
+        <div className="max-w-4xl mx-auto space-y-6">
+
+
           {/* Main Content - Quick Access */}
           <div>
             <Card className="bg-gradient-to-br from-[#A8DADC]/5 to-[#F8F9FA]">
               <CardHeader>
-
                 <CardDescription>选择下方功能开始你的健康奶茶之旅</CardDescription>
               </CardHeader>
               <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -171,8 +248,6 @@ export default function DashboardPage() {
               </CardContent>
             </Card>
           </div>
-
-
         </div>
       </div>
 

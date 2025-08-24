@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 
 import RecordEntry from "@/components/record-entry"
+import BudgetManager from "@/components/budget-manager"
 import { getUserTeaRecords, checkTeaDatabaseConnection, deleteTeaRecord, TeaRecord } from '@/lib/tea-database'
 import { getCurrentUserIdClient } from '@/lib/supabase'
 
@@ -18,6 +19,7 @@ export default function MyRecordsPage() {
   const [isSupabaseConnected, setIsSupabaseConnected] = useState(false)
   const [dataSource, setDataSource] = useState<'database' | 'localStorage'>('localStorage')
   const [editingRecord, setEditingRecord] = useState<any>(null)
+  const [weeklyBudget, setWeeklyBudget] = useState(2000)
 
   // 辅助函数：格式化日期
   const formatDate = (timestamp: string) => {
@@ -41,6 +43,41 @@ export default function MyRecordsPage() {
     }
     return moods[moodKey as keyof typeof moods] || moodKey
   }
+
+  const getSugarLevelName = (level: number) => {
+    if (level === 0) return '无'
+    if (level <= 30) return '少'
+    if (level <= 50) return '半'
+    if (level <= 70) return '七分'
+    return '全'
+  }
+
+  const handleBudgetChange = (newBudget: number) => {
+    setWeeklyBudget(newBudget)
+    localStorage.setItem('weeklyBudget', newBudget.toString())
+  }
+
+  // 计算本周统计
+  const getWeeklyStats = () => {
+    const now = new Date()
+    const startOfWeek = new Date(now)
+    startOfWeek.setDate(now.getDate() - now.getDay()) // 本周开始（周日）
+    startOfWeek.setHours(0, 0, 0, 0)
+    
+    const weeklyRecords = records.filter(record => {
+      const recordDate = new Date(record.timestamp)
+      return recordDate >= startOfWeek
+    })
+    
+    const totalCups = weeklyRecords.length
+    const totalCalories = weeklyRecords.reduce((sum, record) => {
+      return sum + (record.calories || record.estimated_calories || 0)
+    }, 0)
+    
+    return { totalCups, totalCalories }
+  }
+
+  const weeklyStats = getWeeklyStats()
 
   // 删除记录
   const handleDeleteRecord = async (recordId: string) => {
@@ -74,9 +111,15 @@ export default function MyRecordsPage() {
     setShowRecordEntry(true)
   }
 
-  // 检查数据库连接状态
+  // 检查数据库连接状态和加载预算设置
   useEffect(() => {
     checkTeaDatabaseConnection().then(setIsSupabaseConnected)
+    
+    // 从本地存储加载预算设置
+    const savedBudget = localStorage.getItem('weeklyBudget')
+    if (savedBudget) {
+      setWeeklyBudget(parseInt(savedBudget))
+    }
   }, [])
 
   // 加载记录
@@ -159,6 +202,15 @@ export default function MyRecordsPage() {
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="space-y-6">
+            {/* Budget Manager - 置顶显示 */}
+        <div className="mb-6">
+          <BudgetManager 
+            weeklyBudget={weeklyBudget}
+            weeklyCalories={weeklyStats.totalCalories}
+            onBudgetChange={handleBudgetChange}
+          />
+        </div>
+
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-4">
                 <h2 className="text-2xl font-bold text-gray-800">记录历史</h2>
@@ -193,7 +245,17 @@ export default function MyRecordsPage() {
                             {record.brand && (
                               <p className="text-sm text-gray-500 mb-1">品牌: {record.brand}</p>
                             )}
-                            <div className="flex items-center mt-2 space-x-2">
+                            <div className="flex items-center mt-2 space-x-4">
+                              <div className="flex items-center space-x-1">
+                                <span className="text-sm font-medium text-mint-dark">
+                                  {record.calories || 0} kcal
+                                </span>
+                                {record.isManualCalories && (
+                                  <span className="text-xs bg-blue-100 text-blue-700 px-1 rounded">手动</span>
+                                )}
+                              </div>
+                              <span className="text-sm text-gray-500">{record.cupSize === 'small' ? '小杯' : record.cupSize === 'medium' ? '中杯' : '大杯'}</span>
+                              <span className="text-sm text-gray-500">{record.sugarLevel}糖</span>
                               {record.mood && (
                                 <span className="px-2 py-1 bg-gray-100 text-gray-800 text-xs rounded-full font-medium">
                                   {getMoodLabel(record.mood)}

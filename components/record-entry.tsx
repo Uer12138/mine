@@ -54,11 +54,14 @@ export default function RecordEntry({ onClose, editingRecord, onSave }: RecordEn
   const [sugarLevel, setSugarLevel] = useState(50)
   const [mood, setMood] = useState("")
   const [notes, setNotes] = useState("")
+  const [calories, setCalories] = useState<number | ''>(0)
+  const [isManualCalories, setIsManualCalories] = useState(false)
   const [showBrandSearch, setShowBrandSearch] = useState(false)
   const [inputMode, setInputMode] = useState<'search' | 'custom'>('custom')
   const [isSaving, setIsSaving] = useState(false)
   const [saveMessage, setSaveMessage] = useState('')
   const [isComposing, setIsComposing] = useState(false)
+  const [selectedToppings, setSelectedToppings] = useState<{name: string, calories: number}[]>([])
 
   // 初始化编辑模式的数据
   useEffect(() => {
@@ -68,6 +71,9 @@ export default function RecordEntry({ onClose, editingRecord, onSave }: RecordEn
       setSugarLevel(editingRecord.sugarLevel || 50)
       setMood(editingRecord.mood || '')
       setNotes(editingRecord.notes || '')
+      setCalories(editingRecord.calories || 0)
+      setIsManualCalories(editingRecord.isManualCalories || false)
+      setSelectedToppings(editingRecord.toppings || [])
     }
   }, [editingRecord])
 
@@ -85,17 +91,39 @@ export default function RecordEntry({ onClose, editingRecord, onSave }: RecordEn
   }
 
   const calculateTotalCalories = () => {
-    if (!selectedDrink) return 0
+    // 如果是手动输入模式，返回手动输入的卡路里
+    if (isManualCalories) {
+      return typeof calories === 'number' ? calories : 0
+    }
     
+    // 基础卡路里：如果选择了奶茶产品使用其卡路里，否则使用默认值
+    let baseCalories = selectedDrink ? selectedDrink.calories : 200
+    
+    // 杯型系数
     const sizeMultiplier = {
       small: 0.8,
       medium: 1.0,
       large: 1.3
     }[cupSize] || 1.0
     
+    // 糖度系数
     const sugarMultiplier = sugarLevel / 100
     
-    return Math.round(selectedDrink.calories * sizeMultiplier * (0.7 + 0.3 * sugarMultiplier))
+    // 计算基础卡路里（包含杯型和糖度影响）
+    const drinkCalories = Math.round(baseCalories * sizeMultiplier * (0.7 + 0.3 * sugarMultiplier))
+    
+    // 计算小料卡路里
+    const toppingsCalories = selectedToppings.reduce((sum, topping) => sum + topping.calories, 0)
+    
+    // 总卡路里
+    const totalCalories = drinkCalories + toppingsCalories
+    
+    // 如果不是手动模式，自动更新calories状态
+    if (!isManualCalories && calories !== totalCalories) {
+      setCalories(totalCalories)
+    }
+    
+    return totalCalories
   }
 
   const handleSubmit = async () => {
@@ -109,10 +137,12 @@ export default function RecordEntry({ onClose, editingRecord, onSave }: RecordEn
       const recordData = {
         id: editingRecord?.id || Date.now().toString(),
         drinkName: finalDrinkName,
-        brand: '自定义',
-        calories: estimatedCalories,
+        brand: selectedDrink?.brand || '自定义',
+        calories: calculateTotalCalories(),
+        isManualCalories,
         cupSize,
         sugarLevel: getSugarLevelName(sugarLevel),
+        toppings: selectedToppings,
         mood,
         notes,
         date: editingRecord?.date || new Date().toISOString().split('T')[0],
@@ -136,12 +166,12 @@ export default function RecordEntry({ onClose, editingRecord, onSave }: RecordEn
         const userId = await getCurrentUserIdClient()
         const teaRecord = {
           user_id: userId,
-          tea_product_id: undefined,
-          custom_name: customName,
+          tea_product_id: selectedDrink?.id ? parseInt(selectedDrink.id) : undefined,
+          custom_name: selectedDrink ? undefined : customName,
           tea_name: recordData.drinkName,
           size: cupSize,
-          sweetness_level: recordData.sugarLevel,
-          toppings: [],
+          sweetness_level: sugarLevel,
+          toppings: selectedToppings.map(t => t.name),
           estimated_calories: recordData.calories,
           mood: mood || undefined,
           notes: notes || undefined,
@@ -285,26 +315,127 @@ export default function RecordEntry({ onClose, editingRecord, onSave }: RecordEn
               </Card>
             )}
 
-            {selectedDrink && (
-              <div>
-                <h3 className="font-medium mb-3 mt-6">选择杯型</h3>
-                <CupSizeSelector
-                  value={cupSize}
-                  onChange={(size) => setCupSize(size)}
-                />
-              </div>
-            )}
+            <div>
+              <h3 className="font-medium mb-3 mt-6">选择杯型</h3>
+              <CupSizeSelector
+                value={cupSize}
+                onChange={(size) => setCupSize(size)}
+              />
+            </div>
 
-            {selectedDrink && (
-              <div>
-                <h3 className="font-medium mb-3 mt-6">选择糖度</h3>
-                <SugarLevelCalculator
-                  value={sugarLevel}
-                  onChange={(level) => setSugarLevel(level)}
-                  cupSize={cupSize}
-                />
+            <div>
+              <h3 className="font-medium mb-3 mt-6">选择糖度</h3>
+              <SugarLevelCalculator
+                value={sugarLevel}
+                onChange={(level) => setSugarLevel(level)}
+                cupSize={cupSize}
+              />
+            </div>
+
+            <div>
+              <h3 className="font-medium mb-3 mt-6">添加小料</h3>
+              <div className="grid grid-cols-3 gap-2">
+                {[
+                  { name: '珍珠', calories: 50 },
+                  { name: '椰果', calories: 30 },
+                  { name: '布丁', calories: 80 },
+                  { name: '红豆', calories: 60 },
+                  { name: '仙草', calories: 20 },
+                  { name: '芋圆', calories: 70 }
+                ].map((topping) => (
+                  <button
+                    key={topping.name}
+                    type="button"
+                    onClick={() => {
+                      const isSelected = selectedToppings.some(t => t.name === topping.name)
+                      if (isSelected) {
+                        setSelectedToppings(selectedToppings.filter(t => t.name !== topping.name))
+                      } else {
+                        setSelectedToppings([...selectedToppings, topping])
+                      }
+                    }}
+                    className={`p-2 rounded-lg border-2 text-sm transition-all ${
+                      selectedToppings.some(t => t.name === topping.name)
+                        ? "border-mint bg-mint/10 text-mint-dark"
+                        : "border-gray-200 hover:border-mint/50"
+                    }`}
+                  >
+                    {topping.name}
+                    <div className="text-xs text-gray-500">+{topping.calories}kcal</div>
+                  </button>
+                ))}
               </div>
-            )}
+            </div>
+
+            <div>
+              <h3 className="font-medium mb-3 mt-6">卡路里设置</h3>
+              <div className="space-y-4">
+                <div className="flex items-center space-x-4">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsManualCalories(false)
+                      setCalories(calculateTotalCalories())
+                    }}
+                    className={`px-4 py-2 rounded-lg border-2 transition-all ${
+                      !isManualCalories 
+                        ? "border-mint bg-mint/10 text-mint-dark" 
+                        : "border-gray-200 hover:border-mint/50"
+                    }`}
+                  >
+                    智能计算
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setIsManualCalories(true)}
+                    className={`px-4 py-2 rounded-lg border-2 transition-all ${
+                      isManualCalories 
+                        ? "border-mint bg-mint/10 text-mint-dark" 
+                        : "border-gray-200 hover:border-mint/50"
+                    }`}
+                  >
+                    手动输入
+                  </button>
+                </div>
+                
+                {isManualCalories ? (
+                  <div>
+                    <Input
+                      type="number"
+                      placeholder="请输入卡路里数值"
+                      value={calories}
+                      onChange={(e) => {
+                        const value = e.target.value === '' ? '' : Number(e.target.value)
+                        setCalories(value)
+                      }}
+                      className="border-mint/30"
+                      min="0"
+                      max="2000"
+                    />
+                    <p className="text-xs text-gray-500 mt-1">手动输入卡路里数值（0-2000 kcal）</p>
+                  </div>
+                ) : (
+                  <div className="p-3 bg-mint/5 rounded-lg border border-mint/20">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-sm text-gray-600">智能计算结果：</span>
+                      <span className="font-bold text-mint-dark">{calculateTotalCalories()} kcal</span>
+                    </div>
+                    <div className="space-y-1 text-xs text-gray-500">
+                      <div className="flex justify-between">
+                        <span>基础奶茶（{cupSize === 'small' ? '小杯' : cupSize === 'medium' ? '中杯' : '大杯'}，{getSugarLevelName(sugarLevel)}）：</span>
+                        <span>{Math.round((selectedDrink ? selectedDrink.calories : 200) * (cupSize === 'small' ? 0.8 : cupSize === 'large' ? 1.3 : 1.0) * (0.7 + 0.3 * sugarLevel / 100))} kcal</span>
+                      </div>
+                      {selectedToppings.length > 0 && (
+                        <div className="flex justify-between">
+                          <span>小料（{selectedToppings.map(t => t.name).join('、')}）：</span>
+                          <span>+{selectedToppings.reduce((sum, t) => sum + t.calories, 0)} kcal</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
 
             <div>
               <h3 className="font-medium mb-3 mt-6">今天的心情</h3>

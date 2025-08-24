@@ -28,6 +28,8 @@ export interface TeaRecord {
   sweetness_level: string
   toppings?: string[]
   estimated_calories: number
+  calories?: number
+  isManualCalories?: boolean
   mood?: string
   notes?: string
   recorded_at: string
