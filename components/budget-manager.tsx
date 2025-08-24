@@ -8,12 +8,13 @@ import { Progress } from '@/components/ui/progress'
 import { Settings, Target, TrendingUp, AlertTriangle } from 'lucide-react'
 
 interface BudgetManagerProps {
+  weeklyBudget?: number
   weeklyCalories: number
   onBudgetChange?: (budget: number) => void
 }
 
-export default function BudgetManager({ weeklyCalories, onBudgetChange }: BudgetManagerProps) {
-  const [weeklyBudget, setWeeklyBudget] = useState(2000) // 默认每周2000卡路里预算
+export default function BudgetManager({ weeklyBudget: initialBudget, weeklyCalories, onBudgetChange }: BudgetManagerProps) {
+  const [weeklyBudget, setWeeklyBudget] = useState(initialBudget || 2000) // 默认每周2000卡路里预算
   const [isEditing, setIsEditing] = useState(false)
   const [tempBudget, setTempBudget] = useState(weeklyBudget)
 
@@ -24,8 +25,11 @@ export default function BudgetManager({ weeklyCalories, onBudgetChange }: Budget
       const budget = parseInt(savedBudget)
       setWeeklyBudget(budget)
       setTempBudget(budget)
+    } else if (initialBudget) {
+      setWeeklyBudget(initialBudget)
+      setTempBudget(initialBudget)
     }
-  }, [])
+  }, [initialBudget])
 
   // 保存预算到localStorage
   const saveBudget = () => {
