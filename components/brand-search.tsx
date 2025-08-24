@@ -25,6 +25,7 @@ interface BrandSearchProps {
   selectedIngredients?: Record<string, number>
   onIngredientsChange?: (ingredients: Record<string, number>) => void
   onDrinkSelect?: (drink: MilkTeaProduct) => void
+  onSearchChange?: (query: string) => void
 }
 
 // 计算字符串相似度（简单的编辑距离算法）
@@ -9709,7 +9710,7 @@ export const mockProducts: MilkTeaProduct[] = [
   },
 ]
 
-export default function BrandSearch({ selectedIngredients = {}, onIngredientsChange, onDrinkSelect }: BrandSearchProps) {
+export default function BrandSearch({ selectedIngredients = {}, onIngredientsChange, onDrinkSelect, onSearchChange }: BrandSearchProps) {
   const [searchTerm, setSearchTerm] = useState("")
   const [selectedBrand, setSelectedBrand] = useState("all")
   const [calorieFilter, setCalorieFilter] = useState("all")
@@ -9764,6 +9765,11 @@ export default function BrandSearch({ selectedIngredients = {}, onIngredientsCha
       return total + (ingredientData[name as keyof typeof ingredientData] || 0) * amount
     }, 0)
   }
+
+  // 通知父组件搜索查询变化
+  useEffect(() => {
+    onSearchChange?.(searchTerm)
+  }, [searchTerm, onSearchChange])
 
   // 更新总热量
   useEffect(() => {

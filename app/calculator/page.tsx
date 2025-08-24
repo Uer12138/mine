@@ -57,6 +57,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 
 import BrandSearch from "@/components/brand-search"
 import IngredientSelector from "@/components/ingredient-selector"
+import SmartRecommendations from "@/components/smart-recommendations"
 
 
 export default function CalculatorPage() {
@@ -66,6 +67,7 @@ export default function CalculatorPage() {
   const totalCalories = drinkCalories + ingredientsCalories;
   const [selectedIngredients, setSelectedIngredients] = useState<Record<string, number>>({})
   const [selectedDrink, setSelectedDrink] = useState<any>(null)
+  const [searchQuery, setSearchQuery] = useState("")
   const [isCalorieTableExpanded, setIsCalorieTableExpanded] = useState(false)
 
   // 计算配料总热量
@@ -176,7 +178,16 @@ export default function CalculatorPage() {
                 onDrinkSelect={(drink) => {
                   setSelectedDrink(drink);
                 }}
+                onSearchChange={setSearchQuery}
               />
+              
+              {/* 智能推荐模块 */}
+               <SmartRecommendations
+                 searchQuery={searchQuery}
+                 onDrinkSelect={(drink) => {
+                   setSelectedDrink(drink);
+                 }}
+               />
               
               {/* 添加配料模块 */}
               <Card className="border-mint/20">
