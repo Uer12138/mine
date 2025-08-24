@@ -6,6 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { searchMockProductsIntelligent } from "./brand-search"
+import { CalorieVisualizationMini } from "./calorie-visualization"
 
 interface MilkTeaProduct {
   id: string
@@ -167,6 +168,11 @@ export default function SmartRecommendations({ searchQuery, onDrinkSelect }: Sma
                 </Badge>
               )}
             </div>
+          </div>
+          
+          {/* 热量可视化 */}
+          <div className="mt-2 pt-2 border-t border-gray-100">
+            <CalorieVisualizationMini calories={product.calories} />
           </div>
         </div>
       </div>

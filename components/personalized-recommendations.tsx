@@ -5,6 +5,7 @@ import { Heart, Star, Coffee, Zap, RefreshCw } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
+import { CalorieVisualizationMini } from "./calorie-visualization"
 
 interface Recommendation {
   id: string
@@ -688,6 +689,11 @@ export default function PersonalizedRecommendations({ userPreferences }: Persona
               <div className="flex items-center">
                 <Star className="w-4 h-4 text-yellow-500" />
                 <span className="text-sm font-medium ml-1">匹配度 {rec.matchScore}%</span>
+              </div>
+              
+              {/* 热量可视化 */}
+              <div className="pt-3 border-t border-gray-100">
+                <CalorieVisualizationMini calories={rec.calories} />
               </div>
             </CardContent>
           </Card>
