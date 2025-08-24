@@ -33,7 +33,6 @@ const EXERCISE_BASE_100KCAL: ExerciseComparison[] = [
   { name: "跳绳", duration: 10, unit: "分钟" },
   { name: "爬楼梯", duration: 10, unit: "分钟" },
   { name: "跑步", duration: 20, unit: "分钟" },
-  { name: "大扫除", duration: 30, unit: "分钟" },
   { name: "站立", duration: 100, unit: "分钟" },
   { name: "慢走", duration: 50, unit: "分钟" }
 ]
@@ -90,12 +89,13 @@ function formatAmount(multipliedAmount: number, originalAmount: string): string 
   const roundedAmount = Math.round(multipliedAmount * 10) / 10
   
   if (originalAmount.includes("半")) {
-    if (roundedAmount < 1) {
+    if (roundedAmount < 0.5) {
       return `${roundedAmount}碗`
-    } else if (roundedAmount === 1) {
+    } else if (roundedAmount === 0.5) {
       return "半碗"
     } else {
-      return `${Math.round(roundedAmount / 0.5) * 0.5}碗`
+      const bowls = Math.round(roundedAmount * 2) / 2
+      return `${bowls}碗`
     }
   } else if (originalAmount.includes("片")) {
     return `${roundedAmount}片`
