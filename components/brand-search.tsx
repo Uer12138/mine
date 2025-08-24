@@ -8,6 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import SmartRecommendations from "@/components/smart-recommendations"
+import { CalorieVisualizationMini } from "@/components/calorie-visualization"
 
 interface MilkTeaProduct {
   id: string
@@ -9993,6 +9994,9 @@ export default function BrandSearch({ selectedIngredients = {}, onIngredientsCha
                     )}
                   </div>
                 </div>
+
+                {/* 热量可视化对比 */}
+                <CalorieVisualizationMini calories={product.calories} />
               </CardContent>
             </Card>
           ))}
