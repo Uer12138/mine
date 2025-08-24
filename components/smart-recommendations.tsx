@@ -181,7 +181,7 @@ export default function SmartRecommendations({ searchQuery, onDrinkSelect }: Sma
           <CardTitle className="text-lg">智能推荐</CardTitle>
         </div>
         <CardDescription className="text-sm">
-          基于搜索关键词 "{searchQuery}" 为您推荐的最佳选择
+          轻茶纪为您精选 "{searchQuery}" 相关的轻负担好茶，享受美味不负担
         </CardDescription>
       </CardHeader>
       <CardContent>
