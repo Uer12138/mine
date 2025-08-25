@@ -14,18 +14,12 @@ import { updateUserInfo } from "@/lib/auth"
 interface User {
   id: string
   username: string
-  weight?: number
-  height?: number
-  age?: number
   sweetness_preference?: string
 }
 
 export default function ProfilePage() {
   const [user, setUser] = useState<User | null>(null)
   const [formData, setFormData] = useState({
-    weight: "",
-    height: "",
-    age: "",
     sweetness_preference: "medium",
   })
   const [isEditing, setIsEditing] = useState(false)
@@ -40,9 +34,6 @@ export default function ProfilePage() {
       const userData = JSON.parse(currentUser)
       setUser(userData)
       setFormData({
-        weight: userData.weight?.toString() || "",
-        height: userData.height?.toString() || "",
-        age: userData.age?.toString() || "",
         sweetness_preference: userData.sweetness_preference || "medium",
       })
     } else {
@@ -58,27 +49,10 @@ export default function ProfilePage() {
 
     if (!user) return
 
-    if (!formData.weight || !formData.height || !formData.age) {
-      setError("请填写所有必填字段")
-      setIsLoading(false)
-      return
-    }
-
-    const weight = Number.parseFloat(formData.weight)
-    const height = Number.parseFloat(formData.height)
-    const age = Number.parseInt(formData.age)
-
-    if (weight <= 0 || height <= 0 || age <= 0) {
-      setError("所有数值必须大于0")
-      setIsLoading(false)
-      return
-    }
+    // 移除身高体重年龄验证
 
     try {
       const result = await updateUserInfo(user.id, {
-        weight,
-        height,
-        age,
         sweetness_preference: formData.sweetness_preference,
       })
 
@@ -101,9 +75,6 @@ export default function ProfilePage() {
   const handleCancel = () => {
     if (user) {
       setFormData({
-        weight: user.weight?.toString() || "",
-        height: user.height?.toString() || "",
-        age: user.age?.toString() || "",
         sweetness_preference: user.sweetness_preference || "medium",
       })
     }
@@ -143,19 +114,7 @@ export default function ProfilePage() {
                 </div>
 
                 {!isEditing ? (
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <Label>体重</Label>
-                      <Input value={user.weight || "未设置"} disabled className="mt-1" />
-                    </div>
-                    <div>
-                      <Label>身高</Label>
-                      <Input value={user.height || "未设置"} disabled className="mt-1" />
-                    </div>
-                    <div>
-                      <Label>年龄</Label>
-                      <Input value={user.age || "未设置"} disabled className="mt-1" />
-                    </div>
+                  <div>
                     <div>
                       <Label>甜度偏好</Label>
                       <Input
@@ -173,57 +132,15 @@ export default function ProfilePage() {
                   </div>
                 ) : (
                   <form onSubmit={handleSubmit} className="space-y-4">
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <Label htmlFor="weight">体重 (kg)</Label>
-                        <Input
-                          id="weight"
-                          type="number"
-                          step="0.1"
-                          value={formData.weight}
-                          onChange={(e) => setFormData({ ...formData, weight: e.target.value })}
-                          placeholder="请输入体重"
-                          required
-                          disabled={isLoading}
-                          className="mt-1"
-                        />
-                      </div>
-                      <div>
-                        <Label htmlFor="height">身高 (cm)</Label>
-                        <Input
-                          id="height"
-                          type="number"
-                          step="0.1"
-                          value={formData.height}
-                          onChange={(e) => setFormData({ ...formData, height: e.target.value })}
-                          placeholder="请输入身高"
-                          required
-                          disabled={isLoading}
-                          className="mt-1"
-                        />
-                      </div>
-                      <div>
-                        <Label htmlFor="age">年龄</Label>
-                        <Input
-                          id="age"
-                          type="number"
-                          value={formData.age}
-                          onChange={(e) => setFormData({ ...formData, age: e.target.value })}
-                          placeholder="请输入年龄"
-                          required
-                          disabled={isLoading}
-                          className="mt-1"
-                        />
-                      </div>
-                      <div>
-                        <Label htmlFor="sweetness">甜度偏好</Label>
-                        <Select
-                          value={formData.sweetness_preference}
-                          onValueChange={(value) => setFormData({ ...formData, sweetness_preference: value })}
-                          disabled={isLoading}
-                        >
-                          <SelectTrigger className="mt-1">
-                            <SelectValue placeholder="选择甜度偏好" />
+                    <div>
+                      <Label htmlFor="sweetness">甜度偏好</Label>
+                      <Select
+                        value={formData.sweetness_preference}
+                        onValueChange={(value) => setFormData({ ...formData, sweetness_preference: value })}
+                        disabled={isLoading}
+                      >
+                        <SelectTrigger className="mt-1">
+                          <SelectValue placeholder="选择甜度偏好" />
                           </SelectTrigger>
                           <SelectContent>
                             <SelectItem value="low">低糖 (0-30%)</SelectItem>
