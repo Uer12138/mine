@@ -9890,7 +9890,7 @@ export default function BrandSearch({ selectedIngredients = {}, onIngredientsCha
         };
         
         const result = await addTeaRecord(teaRecordData);
-        if (result.success && result.data) {
+        if (result.success && result.data && result.data.id) {
           // 使用数据库返回的ID更新记录
           newRecord.id = result.data.id;
           console.log('记录保存到数据库成功');

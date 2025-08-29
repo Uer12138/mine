@@ -342,27 +342,99 @@ export default function MyRecordsPage() {
             setEditingRecord(null)
           }}
           editingRecord={editingRecord}
-          onSave={(updatedRecord) => {
-            if (editingRecord) {
-              // 更新现有记录
-              const updatedRecords = records.map(record => 
-                record.id === editingRecord.id ? { ...record, ...updatedRecord } : record
-              )
-              setRecords(updatedRecords)
-              localStorage.setItem('teaRecords', JSON.stringify(updatedRecords))
-            } else {
-              // 添加新记录
-              const newRecord = {
-                ...updatedRecord,
-                id: Date.now().toString(),
-                timestamp: new Date().toISOString()
+          onSave={async (updatedRecord) => {
+            try {
+              const userId = await getCurrentUserIdClient()
+              
+              if (editingRecord) {
+                // 更新现有记录 - 使用数据同步函数
+                if (userId) {
+                  const teaRecordData = {
+                    user_id: userId,
+                    tea_name: updatedRecord.drinkName,
+                    brand: updatedRecord.brand,
+                    size: updatedRecord.cupSize,
+                    sweetness_level: updatedRecord.sugarLevel,
+                    toppings: updatedRecord.toppings?.map(t => t.name) || [],
+                    estimated_calories: updatedRecord.calories,
+                    mood: updatedRecord.mood,
+                    notes: updatedRecord.notes,
+                    recorded_at: updatedRecord.timestamp || new Date().toISOString()
+                  }
+                  
+                  const result = await updateTeaRecordSync(editingRecord.id, userId, teaRecordData)
+                  if (result.success) {
+                    console.log('记录更新成功')
+                  }
+                }
+                
+                // 更新本地状态
+                const updatedRecords = records.map(record => 
+                  record.id === editingRecord.id ? { ...record, ...updatedRecord } : record
+                )
+                setRecords(updatedRecords)
+                localStorage.setItem('teaRecords', JSON.stringify(updatedRecords))
+              } else {
+                // 添加新记录 - 使用数据同步函数
+                const newRecord = {
+                  ...updatedRecord,
+                  id: Date.now().toString(),
+                  timestamp: new Date().toISOString()
+                }
+                
+                if (userId) {
+                  const teaRecordData = {
+                    user_id: userId,
+                    tea_name: updatedRecord.drinkName,
+                    brand: updatedRecord.brand,
+                    size: updatedRecord.cupSize,
+                    sweetness_level: updatedRecord.sugarLevel,
+                    toppings: updatedRecord.toppings?.map(t => t.name) || [],
+                    estimated_calories: updatedRecord.calories,
+                    mood: updatedRecord.mood,
+                    notes: updatedRecord.notes,
+                    recorded_at: newRecord.timestamp
+                  }
+                  
+                  const result = await addTeaRecord(teaRecordData)
+                  if (result.success && result.data && result.data.id) {
+                    // 使用数据库返回的ID更新记录
+                    newRecord.id = result.data.id
+                    console.log('记录保存到数据库成功')
+                  }
+                }
+                
+                // 更新本地状态
+                const updatedRecords = [newRecord, ...records]
+                setRecords(updatedRecords)
+                localStorage.setItem('teaRecords', JSON.stringify(updatedRecords))
               }
-              const updatedRecords = [newRecord, ...records]
-              setRecords(updatedRecords)
-              localStorage.setItem('teaRecords', JSON.stringify(updatedRecords))
+              
+              setShowRecordEntry(false)
+              setEditingRecord(null)
+            } catch (error) {
+              console.error('保存记录失败:', error)
+              // 即使数据库保存失败，也要更新本地状态
+              if (editingRecord) {
+                const updatedRecords = records.map(record => 
+                  record.id === editingRecord.id ? { ...record, ...updatedRecord } : record
+                )
+                setRecords(updatedRecords)
+                localStorage.setItem('teaRecords', JSON.stringify(updatedRecords))
+              } else {
+                const newRecord = {
+                  ...updatedRecord,
+                  id: Date.now().toString(),
+                  timestamp: new Date().toISOString()
+                }
+                const updatedRecords = [newRecord, ...records]
+                setRecords(updatedRecords)
+                localStorage.setItem('teaRecords', JSON.stringify(updatedRecords))
+              }
+              
+              setShowRecordEntry(false)
+              setEditingRecord(null)
             }
-            setShowRecordEntry(false)
-            setEditingRecord(null)
           }}
         />
       )}
