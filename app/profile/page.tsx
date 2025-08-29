@@ -240,7 +240,6 @@ export default function ProfilePage() {
                 </div>
 
                 {!isEditing ? (
-<<<<<<< HEAD
                   <div className="space-y-4">
                     <div>
                       <Label htmlFor="sweetness-view">甜度偏好</Label>
@@ -341,22 +340,6 @@ export default function ProfilePage() {
                           </div>
                         ))}
                       </div>
-=======
-                  <div>
-                    <div>
-                      <Label>甜度偏好</Label>
-                      <Input
-                        value={
-                          user.sweetness_preference === "low"
-                            ? "低糖"
-                            : user.sweetness_preference === "high"
-                              ? "高糖"
-                              : "中糖"
-                        }
-                        disabled
-                        className="mt-1"
-                      />
->>>>>>> e562be71013f0ef276a58e5002ab87c89a3c656d
                     </div>
                   </div>
                 ) : (
@@ -370,7 +353,6 @@ export default function ProfilePage() {
                       >
                         <SelectTrigger className="mt-1">
                           <SelectValue placeholder="选择甜度偏好" />
-<<<<<<< HEAD
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="low">低糖 (0-30%)</SelectItem>
@@ -421,15 +403,6 @@ export default function ProfilePage() {
                             </Label>
                           </div>
                         ))}
-=======
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="low">低糖 (0-30%)</SelectItem>
-                            <SelectItem value="medium">中糖 (30-70%)</SelectItem>
-                            <SelectItem value="high">高糖 (70-100%)</SelectItem>
-                          </SelectContent>
-                        </Select>
->>>>>>> e562be71013f0ef276a58e5002ab87c89a3c656d
                       </div>
                     </div>
 
