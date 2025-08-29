@@ -14,9 +14,6 @@ import { updateUserInfo } from "@/lib/auth"
 export default function ProfileSetupPage() {
   const router = useRouter()
   const [formData, setFormData] = useState({
-    weight: "",
-    height: "",
-    age: "",
     sweetness_preference: "medium",
   })
   const [isLoading, setIsLoading] = useState(false)
@@ -35,9 +32,6 @@ export default function ProfileSetupPage() {
       }
 
       const result = await updateUserInfo(currentUser.id, {
-        weight: Number.parseFloat(formData.weight),
-        height: Number.parseFloat(formData.height),
-        age: Number.parseInt(formData.age),
         sweetness_preference: formData.sweetness_preference,
       })
 
@@ -65,49 +59,11 @@ export default function ProfileSetupPage() {
         <CardHeader className="text-center">
           <CardTitle className="text-2xl font-bold text-green-800">完善个人信息</CardTitle>
           <CardDescription className="text-green-600">
-            为了给您提供更精准的奶茶卡路里管理建议，请完善以下信息
+            设置您的奶茶偏好，开始健康的奶茶之旅
           </CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="weight">体重 (kg)</Label>
-              <Input
-                id="weight"
-                type="number"
-                step="0.1"
-                placeholder="请输入您的体重"
-                value={formData.weight}
-                onChange={(e) => setFormData({ ...formData, weight: e.target.value })}
-                required
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="height">身高 (cm)</Label>
-              <Input
-                id="height"
-                type="number"
-                step="0.1"
-                placeholder="请输入您的身高"
-                value={formData.height}
-                onChange={(e) => setFormData({ ...formData, height: e.target.value })}
-                required
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="age">年龄</Label>
-              <Input
-                id="age"
-                type="number"
-                placeholder="请输入您的年龄"
-                value={formData.age}
-                onChange={(e) => setFormData({ ...formData, age: e.target.value })}
-                required
-              />
-            </div>
-
             <div className="space-y-2">
               <Label htmlFor="sweetness">奶茶甜度偏好</Label>
               <Select

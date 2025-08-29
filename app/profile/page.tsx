@@ -136,9 +136,9 @@ export default function ProfilePage() {
         disliked_ingredients: formData.disliked_ingredients,
       }
 
-      const success = await updateUserProfile(user.id, profileData)
+      const result = await updateUserProfile(user.id, profileData)
       
-      if (success) {
+      if (result.success) {
         // 数据库更新成功，同时更新localStorage
         const updatedUser = { ...user, ...profileData }
         localStorage.setItem("currentUser", JSON.stringify(updatedUser))
@@ -150,14 +150,14 @@ export default function ProfilePage() {
         window.dispatchEvent(new CustomEvent('userPreferencesUpdated'))
       } else {
         // 数据库更新失败，回退到原有逻辑
-        const result = await updateUserInfo(user.id, {
+        const fallbackResult = await updateUserInfo(user.id, {
           sweetness_preference: formData.sweetness_preference,
           favorite_brands: formData.favorite_brands,
           disliked_ingredients: formData.disliked_ingredients,
         })
 
-        if (result.success) {
-          const updatedUser = { ...user, ...result.user }
+        if (fallbackResult.success) {
+          const updatedUser = { ...user, ...fallbackResult.user }
           localStorage.setItem("currentUser", JSON.stringify(updatedUser))
           setUser(updatedUser)
           setSuccess("个人信息更新成功！")
@@ -166,7 +166,7 @@ export default function ProfilePage() {
           // 触发用户偏好更新事件
           window.dispatchEvent(new CustomEvent('userPreferencesUpdated'))
         } else {
-          setError(result.error || "更新失败")
+          setError(fallbackResult.error || "更新失败")
         }
       }
     } catch (err) {
@@ -240,6 +240,7 @@ export default function ProfilePage() {
                 </div>
 
                 {!isEditing ? (
+<<<<<<< HEAD
                   <div className="space-y-4">
                     <div>
                       <Label htmlFor="sweetness-view">甜度偏好</Label>
@@ -340,6 +341,22 @@ export default function ProfilePage() {
                           </div>
                         ))}
                       </div>
+=======
+                  <div>
+                    <div>
+                      <Label>甜度偏好</Label>
+                      <Input
+                        value={
+                          user.sweetness_preference === "low"
+                            ? "低糖"
+                            : user.sweetness_preference === "high"
+                              ? "高糖"
+                              : "中糖"
+                        }
+                        disabled
+                        className="mt-1"
+                      />
+>>>>>>> e562be71013f0ef276a58e5002ab87c89a3c656d
                     </div>
                   </div>
                 ) : (
@@ -353,6 +370,7 @@ export default function ProfilePage() {
                       >
                         <SelectTrigger className="mt-1">
                           <SelectValue placeholder="选择甜度偏好" />
+<<<<<<< HEAD
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="low">低糖 (0-30%)</SelectItem>
@@ -403,6 +421,15 @@ export default function ProfilePage() {
                             </Label>
                           </div>
                         ))}
+=======
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="low">低糖 (0-30%)</SelectItem>
+                            <SelectItem value="medium">中糖 (30-70%)</SelectItem>
+                            <SelectItem value="high">高糖 (70-100%)</SelectItem>
+                          </SelectContent>
+                        </Select>
+>>>>>>> e562be71013f0ef276a58e5002ab87c89a3c656d
                       </div>
                     </div>
 
