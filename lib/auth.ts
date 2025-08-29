@@ -86,7 +86,7 @@ export async function registerUser(username: string, password: string) {
 
     console.log("=== REGISTRATION ATTEMPT END (SUCCESS) ===")
     return { success: true, user: data }
-  } catch (error) {
+  } catch (error: any) {
     console.error("Registration error details:", {
       message: error.message,
       code: error.code,
