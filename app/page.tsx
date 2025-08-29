@@ -70,7 +70,7 @@ export default function HomePage() {
               </CardHeader>
               <CardContent className="pt-4">
                 <p className="text-gray-600">
-                  轻茶纪能精确计算各种奶茶的热量构成，包括基底茶、糖分、奶制品和各种配料，让你清楚了解每一口的热量来源。
+                  支持多种奶茶品牌和配料的热量计算，包括基底茶、糖分、奶制品和各种小料，帮你精确掌握每杯奶茶的热量构成。
                 </p>
               </CardContent>
             </Card>
@@ -78,23 +78,23 @@ export default function HomePage() {
             <Card className="overflow-hidden border-2 border-[#A8DADC] shadow-lg transition-all hover:shadow-xl hover:-translate-y-1">
               <CardHeader className="bg-[#A8DADC]/10 pb-2">
                 <div className="text-4xl mb-2 text-center">⭐</div>
-                <CardTitle className="text-xl text-center">个性化推荐</CardTitle>
+                <CardTitle className="text-xl text-center">智能推荐系统</CardTitle>
               </CardHeader>
               <CardContent className="pt-4">
                 <p className="text-gray-600">
-                  基于你的身体数据、甜度偏好和常喝的奶茶品牌，轻茶纪会智能推荐更健康的奶茶选择，满足口味的同时兼顾健康。
+                  基于你的甜度偏好、喜爱品牌和不喜欢的小料，为你推荐最适合的奶茶选择，让每一杯都符合你的口味。
                 </p>
               </CardContent>
             </Card>
 
             <Card className="overflow-hidden border-2 border-[#A8DADC] shadow-lg transition-all hover:shadow-xl hover:-translate-y-1">
               <CardHeader className="bg-[#A8DADC]/10 pb-2">
-                <div className="text-4xl mb-2 text-center">🎯</div>
-                <CardTitle className="text-xl text-center">健康任务系统</CardTitle>
+                <div className="text-4xl mb-2 text-center">💰</div>
+                <CardTitle className="text-xl text-center">预算管理</CardTitle>
               </CardHeader>
               <CardContent className="pt-4">
                 <p className="text-gray-600">
-                  轻茶纪提供循序渐进的健康任务，帮助你逐步改善奶茶消费习惯，实现健康与享受的平衡。
+                  设置每日热量预算，实时追踪消费情况，帮你在享受奶茶的同时保持健康的热量摄入。
                 </p>
               </CardContent>
             </Card>
@@ -107,15 +107,15 @@ export default function HomePage() {
             <div className="text-5xl mr-4 mb-4 md:mb-0">📊</div>
             <div>
               <h3 className="text-xl font-bold text-gray-800 mb-2">消费记录追踪</h3>
-              <p className="text-gray-600">记录并分析你的奶茶消费习惯，查看热量摄入趋势，帮助你做出更明智的选择。</p>
+              <p className="text-gray-600">详细记录每次奶茶消费，包括品牌、配料、热量等信息，支持数据导出和历史查看。</p>
             </div>
           </Card>
 
           <Card className="flex flex-col md:flex-row items-center p-6 border-2 border-[#A8DADC] shadow-lg">
-            <div className="text-5xl mr-4 mb-4 md:mb-0">🏆</div>
+            <div className="text-5xl mr-4 mb-4 md:mb-0">📈</div>
             <div>
-              <h3 className="text-xl font-bold text-gray-800 mb-2">成就系统</h3>
-              <p className="text-gray-600">完成健康目标获得成就徽章，让健康生活更有成就感和乐趣。</p>
+              <h3 className="text-xl font-bold text-gray-800 mb-2">数据统计分析</h3>
+              <p className="text-gray-600">可视化展示你的奶茶消费趋势，分析热量摄入模式，帮助制定更健康的饮食计划。</p>
             </div>
           </Card>
         </div>
