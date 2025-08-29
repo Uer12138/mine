@@ -10,7 +10,7 @@ import RecordEntry from "@/components/record-entry"
 import BudgetManager from "@/components/budget-manager"
 import { getUserTeaRecords, checkTeaDatabaseConnection, deleteTeaRecord, TeaRecord } from '@/lib/tea-database'
 import { getCurrentUserIdClient } from '@/lib/supabase'
-import { getTeaRecords, deleteTeaRecord as deleteTeaRecordSync, syncBudgetData, loadBudgetData } from '@/lib/user-data-sync'
+import { getTeaRecords, deleteTeaRecord as deleteTeaRecordSync, syncBudgetData, loadBudgetData, updateTeaRecord as updateTeaRecordSync, addTeaRecord } from '@/lib/user-data-sync'
 
 export default function MyRecordsPage() {
   const router = useRouter()

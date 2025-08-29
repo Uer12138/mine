@@ -17,7 +17,7 @@ export default function RegisterPage() {
   const [error, setError] = useState('')
   const [debugMode, setDebugMode] = useState(false)
   const [detailedError, setDetailedError] = useState('')
-  const [environmentStatus, setEnvironmentStatus] = useState(null)
+  const [environmentStatus, setEnvironmentStatus] = useState<{hasSupabase: boolean, mode: string} | null>(null)
   const router = useRouter()
 
   // 检查环境状态
@@ -25,7 +25,7 @@ export default function RegisterPage() {
     const hasSupabase = !!(process.env.NEXT_PUBLIC_SUPABASE_URL && 
                           process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY)
     setEnvironmentStatus({
-      supabase: hasSupabase,
+      hasSupabase: hasSupabase,
       mode: hasSupabase ? 'database' : 'local'
     })
   }, [])
@@ -66,7 +66,7 @@ export default function RegisterPage() {
     } catch (err) {
       console.error('注册异常:', err)
       setError('注册失败，请重试')
-      setDetailedError(err.message || err.toString())
+      setDetailedError(err instanceof Error ? err.message : String(err))
     } finally {
       setIsLoading(false)
     }
