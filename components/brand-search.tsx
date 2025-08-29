@@ -9715,8 +9715,9 @@ export const mockProducts: MilkTeaProduct[] = [
 
 export default function BrandSearch({ selectedIngredients = {}, onIngredientsChange, onDrinkSelect, onSearchChange, searchQuery }: BrandSearchProps) {
   const [searchTerm, setSearchTerm] = useState("")
-  const [selectedBrand, setSelectedBrand] = useState("all")
-  const [calorieFilter, setCalorieFilter] = useState("all")
+  // 移除筛选功能
+  // const [selectedBrand, setSelectedBrand] = useState("all")
+  // const [calorieFilter, setCalorieFilter] = useState("all")
   const [selectedProduct, setSelectedProduct] = useState<MilkTeaProduct | null>(null)
   const [totalCalories, setTotalCalories] = useState(0)
 
@@ -9831,12 +9832,9 @@ export default function BrandSearch({ selectedIngredients = {}, onIngredientsCha
 
   const filteredProducts = mockProducts.filter((product) => {
     const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase())
-    const matchesBrand = selectedBrand === "all" || product.brand === selectedBrand
-    const matchesCalorie =
-      calorieFilter === "all" ||
-      (calorieFilter === "low" && product.calories <= 150) ||
-      (calorieFilter === "medium" && product.calories > 150 && product.calories <= 300) ||
-      (calorieFilter === "high" && product.calories > 300)
+    // 移除筛选逻辑
+    const matchesBrand = true
+    const matchesCalorie = true
 
     return matchesSearch && matchesBrand && matchesCalorie
   })
@@ -9846,6 +9844,46 @@ export default function BrandSearch({ selectedIngredients = {}, onIngredientsCha
     setSelectedProduct(product);
     if (typeof onDrinkSelect === 'function') {
       onDrinkSelect(product);
+    }
+  }
+
+  // 处理选择奶茶添加到记录
+  const handleSelectTeaForRecord = (product: MilkTeaProduct) => {
+    try {
+      // 计算总热量（包括配料）
+      const ingredientsCalories = calculateIngredientsCalories();
+      const totalCalories = product.calories + ingredientsCalories;
+      
+      // 创建新的奶茶记录
+      const newRecord = {
+        id: Date.now().toString(),
+        drinkName: product.name,
+        brand: product.brand,
+        calories: totalCalories,
+        cupSize: product.size === '大杯' ? 'large' : product.size === '小杯' ? 'small' : 'medium',
+        sugarLevel: product.sugar,
+        timestamp: new Date().toISOString(),
+        notes: `配料：${Object.keys(selectedIngredients || {}).join('、') || '无'}`,
+        mood: '',
+        isManualCalories: false,
+        ingredients: Object.keys(selectedIngredients || {})
+      };
+      
+      // 获取现有记录
+      const existingRecords = JSON.parse(localStorage.getItem('teaRecords') || '[]');
+      
+      // 添加新记录到开头
+      const updatedRecords = [newRecord, ...existingRecords];
+      
+      // 保存到localStorage
+      localStorage.setItem('teaRecords', JSON.stringify(updatedRecords));
+      
+      // 显示成功提示
+      alert(`已将「${product.name}」添加到我的奶茶记录中！\n总热量：${totalCalories} kcal`);
+      
+    } catch (error) {
+      console.error('保存奶茶记录失败:', error);
+      alert('保存失败，请重试');
     }
   }
 
@@ -9894,33 +9932,7 @@ export default function BrandSearch({ selectedIngredients = {}, onIngredientsCha
             />
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-            <Select value={selectedBrand} onValueChange={setSelectedBrand}>
-              <SelectTrigger className="border-mint/30 h-10 sm:h-11">
-                <SelectValue placeholder="选择品牌" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">全部品牌</SelectItem>
-                {brands.slice(1).map((brand) => (
-                  <SelectItem key={brand} value={brand}>
-                    {brand}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-
-            <Select value={calorieFilter} onValueChange={setCalorieFilter}>
-              <SelectTrigger className="border-mint/30 h-10 sm:h-11">
-                <SelectValue placeholder="热量筛选" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">全部热量</SelectItem>
-                <SelectItem value="low">低卡 (≤150kcal)</SelectItem>
-                <SelectItem value="medium">中卡 (151-300kcal)</SelectItem>
-                <SelectItem value="high">高卡 (&gt;300kcal)</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+          {/* 移除筛选按钮 */}
         </CardContent>
       </Card>
 
@@ -9936,11 +9948,6 @@ export default function BrandSearch({ selectedIngredients = {}, onIngredientsCha
       <div className="space-y-4">
         <div className="flex items-center justify-between flex-wrap gap-2">
           <h3 className="text-base sm:text-lg font-semibold">搜索结果 ({filteredProducts.length})</h3>
-          <Button variant="outline" size="sm" className="border-mint/30 bg-transparent text-xs sm:text-sm">
-            <Filter className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
-            <span className="hidden sm:inline">更多筛选</span>
-            <span className="sm:hidden">筛选</span>
-          </Button>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2 gap-3 sm:gap-4">
@@ -9997,6 +10004,20 @@ export default function BrandSearch({ selectedIngredients = {}, onIngredientsCha
 
                 {/* 热量可视化对比 */}
                 <CalorieVisualizationMini calories={product.calories} />
+                
+                {/* 选择按钮 */}
+                <div className="mt-3 pt-3 border-t border-gray-100">
+                  <Button 
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleSelectTeaForRecord(product);
+                    }}
+                    className="w-full bg-emerald-500 hover:bg-emerald-600 text-white text-sm border-0 font-medium shadow-lg"
+                    size="sm"
+                  >
+                    选择这款奶茶
+                  </Button>
+                </div>
               </CardContent>
             </Card>
           ))}

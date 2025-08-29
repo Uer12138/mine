@@ -74,10 +74,10 @@
 
 @theme inline {
   --font-sans: var(--font-inter), var(--font-noto-sans-sc);
-  --color-mint: #a8dadc;
+  --color-mint: #4ecdc4;
   --color-cream: #f8f9fa;
-  --color-mint-light: #c7e9ea;
-  --color-mint-dark: #7bc5c9;
+  --color-mint-light: #7dd3db;
+  --color-mint-dark: #2ba8a0;
   --color-gray-600: #6b7280;
   --color-gray-700: #374151;
   --color-gray-800: #1f2937;

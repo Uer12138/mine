@@ -10,6 +10,8 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { loginUser, clearOldUserData } from "@/lib/auth"
+import { getUserProfile, loadBudgetData, getTeaRecords } from "@/lib/user-data-sync"
+import { getCurrentUserIdClient } from "@/lib/supabase"
 
 export default function LoginPage() {
   const [username, setUsername] = useState("")
@@ -43,8 +45,42 @@ export default function LoginPage() {
       if (result.success) {
         // 存储用户信息到localStorage
         localStorage.setItem("currentUser", JSON.stringify(result.user))
-        setDebugInfo(`欢迎回来，${username}！登录成功，正在跳转...`)
-        router.push("/dashboard")
+        setDebugInfo(`欢迎回来，${username}！登录成功，正在加载您的数据...`)
+        
+        // 从数据库加载用户数据
+        try {
+          const userId = result.user.id
+          
+          // 加载用户资料
+          const profileResult = await getUserProfile(userId)
+          if (profileResult.success && profileResult.data) {
+            // 将数据库中的用户资料同步到localStorage
+            const existingUser = JSON.parse(localStorage.getItem("currentUser") || "{}")
+            const updatedUser = {
+              ...existingUser,
+              ...profileResult.data,
+              id: userId // 确保ID正确
+            }
+            localStorage.setItem("currentUser", JSON.stringify(updatedUser))
+          }
+          
+          // 加载预算数据
+          const budget = await loadBudgetData(userId)
+          // loadBudgetData 函数已经会自动同步到localStorage
+          
+          // 预加载奶茶记录（可选，提升用户体验）
+          await getTeaRecords(userId, 10) // 只加载最近10条记录
+          
+          setDebugInfo(`数据加载完成，正在跳转到主页...`)
+        } catch (error) {
+          console.error('Failed to load user data from database:', error)
+          setDebugInfo(`数据加载遇到问题，但不影响使用，正在跳转...`)
+        }
+        
+        // 跳转到主页
+        setTimeout(() => {
+          router.push("/dashboard")
+        }, 1000) // 给用户一点时间看到加载信息
       } else {
         // 如果用户存在但密码错误，显示友好的错误信息
         if (userExists) {

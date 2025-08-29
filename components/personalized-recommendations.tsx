@@ -6,6 +6,8 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { CalorieVisualizationMini } from "./calorie-visualization"
+import { getUserProfile, updateUserProfile, getUserPreferences, setUserPreference } from "@/lib/user-data-sync"
+import { getCurrentUserIdClient } from "@/lib/supabase"
 
 interface Recommendation {
   id: string
@@ -31,16 +33,95 @@ interface PersonalizedRecommendationsProps {
 export default function PersonalizedRecommendations({ userPreferences }: PersonalizedRecommendationsProps) {
   const [recommendations, setRecommendations] = useState<Recommendation[]>([])
   const [isLoading, setIsLoading] = useState(false)
+  const [userPrefs, setUserPrefs] = useState<any>(null)
 
-  // Mock user preferences if not provided
+  // 从数据库或localStorage获取用户偏好设置
+  const loadUserPreferences = async () => {
+    try {
+      const userId = await getCurrentUserIdClient()
+      
+      // 首先尝试从数据库获取用户资料
+      const profileResult = await getUserProfile(userId)
+      if (profileResult.success && profileResult.data) {
+        const user = profileResult.data
+        
+        const newPrefs = {
+          favoriteBrands: user.favorite_brands || [],
+          sweetness_preference: user.sweetness_preference || "medium",
+          minSweetness: user.sweetness_preference === "low" ? 30 : 
+                       user.sweetness_preference === "medium" ? 50 : 70,
+          dislikedIngredients: user.disliked_ingredients || [],
+          healthGoals: user.health_goals || ["控制热量摄入"]
+        }
+        
+        setUserPrefs(newPrefs)
+        return
+      }
+      
+      // 如果数据库获取失败，从localStorage获取
+      const userData = localStorage.getItem('currentUser')
+      
+      if (userData) {
+        const user = JSON.parse(userData)
+        
+        const newPrefs = {
+          favoriteBrands: user.favorite_brands || [],
+          sweetness_preference: user.sweetness_preference || "medium",
+          minSweetness: user.sweetness_preference === "low" ? 30 : 
+                       user.sweetness_preference === "medium" ? 50 : 70,
+          dislikedIngredients: user.disliked_ingredients || [],
+          healthGoals: user.health_goals || ["控制热量摄入"]
+        }
+        setUserPrefs(newPrefs)
+      }
+    } catch (error) {
+      console.error('Error loading user preferences:', error)
+    }
+  }
+
+  useEffect(() => {
+    if (typeof window !== 'undefined' && typeof localStorage !== 'undefined') {
+      // 延迟执行以确保客户端完全加载
+      setTimeout(() => {
+        loadUserPreferences()
+      }, 100)
+    }
+  }, [])
+
+
+
+  // 监听localStorage变化，实时更新用户偏好
+  useEffect(() => {
+    const handleStorageChange = async () => {
+      await loadUserPreferences()
+      // 延迟重新生成推荐，确保状态更新完成
+      setTimeout(() => {
+        generateRecommendations()
+      }, 100)
+    }
+
+    // 监听storage事件
+    window.addEventListener('storage', handleStorageChange)
+    
+    // 也监听自定义事件，用于同一页面内的更新
+    window.addEventListener('userPreferencesUpdated', handleStorageChange)
+    
+    return () => {
+      window.removeEventListener('storage', handleStorageChange)
+      window.removeEventListener('userPreferencesUpdated', handleStorageChange)
+    }
+  }, [])
+
+  // Mock user preferences if not provided and no user data
   const defaultPreferences = {
     favoriteBrands: ["喜茶", "奈雪"],
+    sweetness_preference: "medium",
     minSweetness: 50,
     dislikedIngredients: ["珍珠"],
     healthGoals: ["控制热量摄入", "减少糖分"],
   }
 
-  const prefs = userPreferences || defaultPreferences
+  const prefs = userPreferences || userPrefs || defaultPreferences
 
   const generateRecommendations = () => {
     setIsLoading(true)
@@ -50,6 +131,7 @@ export default function PersonalizedRecommendations({ userPreferences }: Persona
       // 根据用户偏好品牌生成智能推荐
       // 添加随机化因子确保每次刷新都有不同结果
       const randomSeed = Math.random()
+      const randomOffset = Math.floor(randomSeed * 3) // 0-2的随机偏移
       const brandRecommendations: { [key: string]: Recommendation[] } = {
         "茶百道": [
           {
@@ -410,11 +492,16 @@ export default function PersonalizedRecommendations({ userPreferences }: Persona
          ]
        }
 
+       // 根据用户甜度偏好调整推荐策略
+       const isLowSugar = prefs.sweetness_preference === "low"
+       const isMediumSugar = prefs.sweetness_preference === "medium"
+       const isHighSugar = prefs.sweetness_preference === "high"
+       
        // 根据用户偏好品牌生成推荐
        let mockRecommendations: Recommendation[] = []
       
       if (prefs.favoriteBrands && prefs.favoriteBrands.length > 0) {
-        prefs.favoriteBrands.forEach(brand => {
+        prefs.favoriteBrands.forEach((brand: string) => {
           if (brandRecommendations[brand]) {
             mockRecommendations.push(...brandRecommendations[brand])
           }
@@ -535,25 +622,85 @@ export default function PersonalizedRecommendations({ userPreferences }: Persona
         mockRecommendations.push(...generalRecs)
       }
 
-      // 随机打乱推荐顺序，确保每次刷新都不同
-      const shuffleArray = (array: Recommendation[]) => {
-        const shuffled = [...array]
-        for (let i = shuffled.length - 1; i > 0; i--) {
-          const j = Math.floor(Math.random() * (i + 1))
-          ;[shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]]
-        }
-        return shuffled
+      // 根据甜度偏好和健康目标调整推荐优先级
+      const adjustRecommendationsByPreferences = (recommendations: Recommendation[]) => {
+        return recommendations.map(rec => {
+          let adjustedScore = rec.matchScore
+          
+          // 根据甜度偏好调整分数
+          if (isLowSugar && rec.calories <= 150) {
+            adjustedScore += 15 // 低糖用户偏好低卡路里
+          } else if (isLowSugar && rec.calories > 250) {
+            adjustedScore -= 10 // 低糖用户减少高卡路里推荐
+          }
+          
+          if (isMediumSugar && rec.calories >= 150 && rec.calories <= 250) {
+            adjustedScore += 10 // 中糖用户偏好中等卡路里
+          }
+          
+          if (isHighSugar && rec.calories > 200) {
+            adjustedScore += 5 // 高糖用户可以接受较高卡路里
+          }
+          
+          // 健康目标调整
+          if (prefs.healthGoals.includes("控制热量摄入") && rec.calories <= 200) {
+            adjustedScore += 12
+          }
+          
+          if (prefs.healthGoals.includes("减少糖分") && rec.category === "perfect") {
+            adjustedScore += 8
+          }
+          
+          return { ...rec, matchScore: Math.min(100, adjustedScore) }
+        })
       }
-
-      const shuffledRecommendations = shuffleArray(mockRecommendations)
-      setRecommendations(shuffledRecommendations.slice(0, 2)) // 最多返回2个推荐
+      
+      const adjustedRecommendations = adjustRecommendationsByPreferences(mockRecommendations)
+      
+      // 按匹配分数排序，优先推荐高分项目
+      const sortedRecommendations = adjustedRecommendations.sort((a, b) => b.matchScore - a.matchScore)
+      
+      // 使用随机偏移来选择不同的推荐组合
+      const totalRecommendations = sortedRecommendations.length
+      const startIndex = randomOffset % Math.max(1, totalRecommendations - 1)
+      const selectedRecommendations = []
+      
+      // 选择第一个推荐（从随机起始位置开始）
+      if (totalRecommendations > 0) {
+        selectedRecommendations.push(sortedRecommendations[startIndex])
+      }
+      
+      // 选择第二个推荐（确保不重复）
+      if (totalRecommendations > 1) {
+        const secondIndex = (startIndex + 1 + Math.floor(randomSeed * 3)) % totalRecommendations
+        const secondRec = sortedRecommendations[secondIndex]
+        if (secondRec.id !== selectedRecommendations[0]?.id) {
+          selectedRecommendations.push(secondRec)
+        } else if (totalRecommendations > 2) {
+          // 如果重复了，选择下一个不同的
+          const thirdIndex = (secondIndex + 1) % totalRecommendations
+          selectedRecommendations.push(sortedRecommendations[thirdIndex])
+        }
+      }
+      
+      setRecommendations(selectedRecommendations)
       setIsLoading(false)
     }, 1000)
   }
 
   useEffect(() => {
     generateRecommendations()
-  }, [])
+  }, [userPrefs]) // 当用户偏好更新时重新生成推荐
+  
+  // 手动刷新推荐
+  const refreshRecommendations = () => {
+    setIsLoading(true)
+    // 重新加载用户偏好并生成推荐
+    loadUserPreferences()
+    setTimeout(() => {
+      generateRecommendations()
+    }, 200)
+  }
 
   const getCategoryColor = (category: string) => {
     switch (category) {
@@ -605,7 +752,7 @@ export default function PersonalizedRecommendations({ userPreferences }: Persona
           <p className="text-gray-600 mt-1">基于你的偏好和健康目标的个性化推荐</p>
         </div>
         <Button
-          onClick={generateRecommendations}
+          onClick={refreshRecommendations}
           disabled={isLoading}
           variant="outline"
           className="border-mint/30 bg-transparent"
@@ -627,12 +774,14 @@ export default function PersonalizedRecommendations({ userPreferences }: Persona
               {prefs.favoriteBrands.join("、")}
             </div>
             <div>
-              <span className="font-medium">最低甜度：</span>
-              {prefs.minSweetness <= 30 ? "三分糖" : prefs.minSweetness <= 50 ? "五分糖" : "七分糖"}
+              <span className="font-medium">甜度偏好：</span>
+              {prefs.sweetness_preference === "low" ? "低糖" : 
+               prefs.sweetness_preference === "medium" ? "中糖" : 
+               "高糖"}
             </div>
             <div>
               <span className="font-medium">不喜配料：</span>
-              {prefs.dislikedIngredients.join("、") || "无"}
+              {prefs.dislikedIngredients && prefs.dislikedIngredients.length > 0 ? prefs.dislikedIngredients.join("、") : "无"}
             </div>
             <div>
               <span className="font-medium">健康目标：</span>

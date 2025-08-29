@@ -1,9 +1,15 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import PersonalizedRecommendations from "@/components/personalized-recommendations"
+import dynamic from "next/dynamic"
 import { Button } from "@/components/ui/button"
 import { Heart } from "lucide-react"
+
+// 动态导入PersonalizedRecommendations组件，确保只在客户端渲染
+const PersonalizedRecommendations = dynamic(
+  () => import("@/components/personalized-recommendations"),
+  { ssr: false }
+)
 
 interface UserPreferences {
   favoriteBrands: string[]
@@ -16,21 +22,27 @@ export default function RecommendationsPage() {
   const [userPreferences, setUserPreferences] = useState<UserPreferences | null>(null)
 
   useEffect(() => {
-    // 从localStorage读取用户信息和偏好
-    const currentUser = localStorage.getItem("currentUser")
-    if (currentUser) {
-      const user = JSON.parse(currentUser)
-      
-      // 构建用户偏好对象
-      const preferences: UserPreferences = {
-        favoriteBrands: user.favorite_brands || [],
-        minSweetness: user.sweetness_preference === "low" ? 30 : 
-                     user.sweetness_preference === "medium" ? 50 : 70,
-        dislikedIngredients: [], // 可以后续扩展
-        healthGoals: ["控制热量摄入", "减少糖分"] // 默认健康目标
+    if (typeof window !== 'undefined' && typeof localStorage !== 'undefined') {
+      // 从localStorage读取用户信息和偏好
+      const currentUser = localStorage.getItem("currentUser")
+      if (currentUser) {
+        try {
+          const user = JSON.parse(currentUser)
+          
+          // 构建用户偏好对象
+          const preferences: UserPreferences = {
+            favoriteBrands: user.favorite_brands || [],
+            minSweetness: user.sweetness_preference === "low" ? 30 : 
+                         user.sweetness_preference === "medium" ? 50 : 70,
+            dislikedIngredients: user.disliked_ingredients || [], // 从用户注册信息中读取不喜小料
+            healthGoals: ["控制热量摄入", "减少糖分"] // 默认健康目标
+          }
+          
+          setUserPreferences(preferences)
+        } catch (error) {
+          console.error('Error parsing user data:', error)
+        }
       }
-      
-      setUserPreferences(preferences)
     }
   }, [])
 

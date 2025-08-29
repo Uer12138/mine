@@ -7,6 +7,8 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { searchMockProductsIntelligent } from "./brand-search"
 import { CalorieVisualizationMini } from "./calorie-visualization"
+import { addTeaRecord } from "@/lib/user-data-sync"
+import { getCurrentUserIdClient } from "@/lib/supabase"
 
 interface MilkTeaProduct {
   id: string
@@ -31,8 +33,41 @@ export default function SmartRecommendations({ searchQuery, onDrinkSelect }: Sma
     lowestCalorie: MilkTeaProduct | null
     balanced: MilkTeaProduct | null
   }>({ lowestCalorie: null, balanced: null })
+  const [isLoading, setIsLoading] = useState(false)
 
-  useEffect(() => {
+  // 处理选择奶茶添加到记录
+  const handleSelectTeaForRecord = async (product: MilkTeaProduct) => {
+    try {
+      const userId = await getCurrentUserIdClient()
+      
+      const teaRecordData = {
+        user_id: userId,
+        tea_product_id: parseInt(product.id),
+        tea_name: product.name,
+        brand: product.brand,
+        size: product.size === '大杯' ? 'large' : product.size === '小杯' ? 'small' : 'medium',
+        sweetness_level: product.sugar || '标准',
+        toppings: product.ingredients.join(', '),
+        estimated_calories: product.calories,
+        notes: `智能推荐：${product.ingredients.join('、')}`,
+        recorded_at: new Date().toISOString()
+      }
+      
+      const result = await addTeaRecord(teaRecordData)
+      
+      if (result.success) {
+        alert(`已将「${product.name}」添加到我的奶茶记录中！\n总热量：${product.calories} kcal`)
+      } else {
+        alert(`已将「${product.name}」添加到本地记录中！\n总热量：${product.calories} kcal`)
+      }
+      
+    } catch (error) {
+      console.error('保存奶茶记录失败:', error)
+      alert('保存失败，请重试')
+    }
+   }
+
+   useEffect(() => {
     if (!searchQuery.trim()) {
       setRecommendations({ lowestCalorie: null, balanced: null })
       return
@@ -147,9 +182,8 @@ export default function SmartRecommendations({ searchQuery, onDrinkSelect }: Sma
             
             <Button
               size="sm"
-              variant="outline"
-              className="text-xs h-6 px-2"
-              onClick={() => onDrinkSelect?.(product)}
+              className="text-xs h-6 px-2 bg-emerald-500 hover:bg-emerald-600 text-white border-0 shadow-lg"
+              onClick={() => handleSelectTeaForRecord(product)}
             >
               选择
             </Button>

@@ -14,12 +14,10 @@ import { updateUserInfo, initializeTeaCalorieTasks } from "@/lib/auth"
 
 export default function OnboardingPage() {
   const [formData, setFormData] = useState({
-    weight: "",
-    height: "",
-    age: "",
     sweetness_preference: "medium",
   })
   const [selectedBrands, setSelectedBrands] = useState<string[]>([])
+  const [dislikedIngredients, setDislikedIngredients] = useState<string[]>([])
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState("")
   const [formValid, setFormValid] = useState(false)
@@ -35,6 +33,18 @@ export default function OnboardingPage() {
     "益禾堂",
     "沪上阿姨"
   ]
+  
+  // 常见小料列表
+  const commonIngredients = [
+    "珍珠",
+    "椰果",
+    "布丁",
+    "仙草",
+    "红豆",
+    "芋圆",
+    "奶盖",
+    "燕麦"
+  ]
 
   useEffect(() => {
     // 检查是否有临时用户ID
@@ -46,7 +56,7 @@ export default function OnboardingPage() {
   
   // 监听表单数据变化，验证表单
   useEffect(() => {
-    const isValid = !!formData.weight && !!formData.height && !!formData.age
+    const isValid = true // 移除必填字段验证
     setFormValid(isValid)
   }, [formData])
 
@@ -62,31 +72,14 @@ export default function OnboardingPage() {
       return
     }
 
-    // 验证表单数据
-    if (!formData.weight || !formData.height || !formData.age) {
-      setError("请填写所有必填信息")
-      setIsLoading(false)
-      return
-    }
-
-    const weight = Number.parseFloat(formData.weight)
-    const height = Number.parseFloat(formData.height)
-    const age = Number.parseInt(formData.age)
-
-    if (weight <= 0 || height <= 0 || age <= 0) {
-      setError("请输入有效的数值")
-      setIsLoading(false)
-      return
-    }
+    // 移除身高体重年龄验证
 
     try {
       // 更新用户信息
       const updateResult = await updateUserInfo(tempUserId, {
-        weight,
-        height,
-        age,
         sweetness_preference: formData.sweetness_preference,
-        favorite_brands: selectedBrands
+        favorite_brands: selectedBrands,
+        disliked_ingredients: dislikedIngredients
       })
 
       if (!updateResult.success) {
@@ -119,6 +112,15 @@ export default function OnboardingPage() {
         : [...prev, brand]
     )
   }
+  
+  // 处理不喜小料选择
+  const handleIngredientToggle = (ingredient: string) => {
+    setDislikedIngredients(prev => 
+      prev.includes(ingredient) 
+        ? prev.filter(i => i !== ingredient) 
+        : [...prev, ingredient]
+    )
+  }
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-teacal-mint/20 to-teacal-cream">
@@ -126,53 +128,11 @@ export default function OnboardingPage() {
         <CardHeader className="text-center">
           <CardTitle className="text-2xl font-bold text-gray-900">完善个人信息</CardTitle>
           <CardDescription className="text-gray-600">
-            为了为您提供更精准的奶茶热量管理建议，请填写以下信息
-            <div className="mt-1 text-xs text-red-500">带 * 的为必填项</div>
+            设置您的奶茶偏好，开始健康的奶茶之旅
           </CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="weight">体重 (kg) <span className="text-red-500">*</span></Label>
-              <Input
-                id="weight"
-                type="number"
-                step="0.1"
-                value={formData.weight}
-                onChange={(e) => setFormData({ ...formData, weight: e.target.value })}
-                placeholder="请输入体重"
-                required
-                disabled={isLoading}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="height">身高 (cm) <span className="text-red-500">*</span></Label>
-              <Input
-                id="height"
-                type="number"
-                step="0.1"
-                value={formData.height}
-                onChange={(e) => setFormData({ ...formData, height: e.target.value })}
-                placeholder="请输入身高"
-                required
-                disabled={isLoading}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="age">年龄 <span className="text-red-500">*</span></Label>
-              <Input
-                id="age"
-                type="number"
-                value={formData.age}
-                onChange={(e) => setFormData({ ...formData, age: e.target.value })}
-                placeholder="请输入年龄"
-                required
-                disabled={isLoading}
-              />
-            </div>
-
             <div className="space-y-2">
               <Label htmlFor="sweetness">甜度偏好</Label>
               <Select
@@ -189,6 +149,27 @@ export default function OnboardingPage() {
                   <SelectItem value="high">高甜 (70-100%)</SelectItem>
                 </SelectContent>
               </Select>
+            </div>
+            
+            <div className="space-y-2">
+              <Label>不喜欢的小料（可多选）</Label>
+              <div className="grid grid-cols-2 gap-2 mt-2">
+                {commonIngredients.map((ingredient) => (
+                  <div key={ingredient} className="flex items-center space-x-2">
+                    <Checkbox 
+                      id={`ingredient-${ingredient}`} 
+                      checked={dislikedIngredients.includes(ingredient)}
+                      onCheckedChange={() => handleIngredientToggle(ingredient)}
+                    />
+                    <Label 
+                      htmlFor={`ingredient-${ingredient}`}
+                      className="text-sm cursor-pointer"
+                    >
+                      {ingredient}
+                    </Label>
+                  </div>
+                ))}
+              </div>
             </div>
             
             <div className="space-y-2">

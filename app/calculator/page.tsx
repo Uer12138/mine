@@ -159,7 +159,7 @@ export default function CalculatorPage() {
                 </Button>
                 <div className="flex items-center space-x-1 sm:space-x-2 flex-1 justify-center sm:justify-start">
                   <Calculator className="w-5 h-5 sm:w-6 sm:h-6 text-mint" />
-                  <h1 className="text-lg sm:text-xl font-bold text-gray-800">热量计算器</h1>
+                  <h1 className="text-lg sm:text-xl font-bold text-gray-800">热量查询</h1>
                 </div>
               </div>
             </div>

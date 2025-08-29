@@ -9,24 +9,48 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Checkbox } from "@/components/ui/checkbox"
 import { updateUserInfo } from "@/lib/auth"
+import { getUserProfile, updateUserProfile } from "@/lib/user-data-sync"
+import { getCurrentUserIdClient } from "@/lib/supabase"
 
 interface User {
   id: string
   username: string
-  weight?: number
-  height?: number
-  age?: number
   sweetness_preference?: string
+  favorite_brands?: string[]
+  disliked_ingredients?: string[]
 }
 
 export default function ProfilePage() {
   const [user, setUser] = useState<User | null>(null)
+  
+  // 常见奶茶品牌列表
+  const teaBrands = [
+    "茶百道",
+    "奈雪的茶",
+    "蜜雪冰城",
+    "一点点",
+    "COCO都可",
+    "益禾堂",
+    "沪上阿姨"
+  ]
+  
+  // 常见小料列表
+  const commonIngredients = [
+    "珍珠",
+    "椰果",
+    "布丁",
+    "仙草",
+    "红豆",
+    "芋圆",
+    "奶盖",
+    "燕麦"
+  ]
   const [formData, setFormData] = useState({
-    weight: "",
-    height: "",
-    age: "",
     sweetness_preference: "medium",
+    favorite_brands: [] as string[],
+    disliked_ingredients: [] as string[],
   })
   const [isEditing, setIsEditing] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
@@ -35,19 +59,64 @@ export default function ProfilePage() {
   const router = useRouter()
 
   useEffect(() => {
-    const currentUser = localStorage.getItem("currentUser")
-    if (currentUser) {
-      const userData = JSON.parse(currentUser)
-      setUser(userData)
-      setFormData({
-        weight: userData.weight?.toString() || "",
-        height: userData.height?.toString() || "",
-        age: userData.age?.toString() || "",
-        sweetness_preference: userData.sweetness_preference || "medium",
-      })
-    } else {
-      router.push("/auth/login")
+    const loadUserData = async () => {
+      try {
+        const userId = await getCurrentUserIdClient()
+        if (!userId) {
+          router.push("/auth/login")
+          return
+        }
+
+        // 首先尝试从数据库获取用户资料
+        const result = await getUserProfile(userId)
+        if (result.success && result.data) {
+          const profile = result.data
+          setUser({
+            id: userId,
+            username: profile.username,
+            sweetness_preference: profile.sweetness_preference,
+            favorite_brands: profile.favorite_brands,
+            disliked_ingredients: profile.disliked_ingredients
+          })
+          setFormData({
+            sweetness_preference: profile.sweetness_preference || "medium",
+            favorite_brands: profile.favorite_brands || [],
+            disliked_ingredients: profile.disliked_ingredients || [],
+          })
+        } else {
+          // 回退到localStorage
+          const currentUser = localStorage.getItem("currentUser")
+          if (currentUser) {
+            const userData = JSON.parse(currentUser)
+            setUser(userData)
+            setFormData({
+              sweetness_preference: userData.sweetness_preference || "medium",
+              favorite_brands: userData.favorite_brands || [],
+              disliked_ingredients: userData.disliked_ingredients || [],
+            })
+          } else {
+            router.push("/auth/login")
+          }
+        }
+      } catch (error) {
+        console.error('Error loading user data:', error)
+        // 回退到localStorage
+        const currentUser = localStorage.getItem("currentUser")
+        if (currentUser) {
+          const userData = JSON.parse(currentUser)
+          setUser(userData)
+          setFormData({
+            sweetness_preference: userData.sweetness_preference || "medium",
+            favorite_brands: userData.favorite_brands || [],
+            disliked_ingredients: userData.disliked_ingredients || [],
+          })
+        } else {
+          router.push("/auth/login")
+        }
+      }
     }
+
+    loadUserData()
   }, [router])
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -58,38 +127,47 @@ export default function ProfilePage() {
 
     if (!user) return
 
-    if (!formData.weight || !formData.height || !formData.age) {
-      setError("请填写所有必填字段")
-      setIsLoading(false)
-      return
-    }
-
-    const weight = Number.parseFloat(formData.weight)
-    const height = Number.parseFloat(formData.height)
-    const age = Number.parseInt(formData.age)
-
-    if (weight <= 0 || height <= 0 || age <= 0) {
-      setError("所有数值必须大于0")
-      setIsLoading(false)
-      return
-    }
-
     try {
-      const result = await updateUserInfo(user.id, {
-        weight,
-        height,
-        age,
+      // 首先尝试更新数据库
+      const profileData = {
+        username: user.username,
         sweetness_preference: formData.sweetness_preference,
-      })
+        favorite_brands: formData.favorite_brands,
+        disliked_ingredients: formData.disliked_ingredients,
+      }
 
-      if (result.success) {
-        const updatedUser = { ...user, ...result.user }
+      const success = await updateUserProfile(user.id, profileData)
+      
+      if (success) {
+        // 数据库更新成功，同时更新localStorage
+        const updatedUser = { ...user, ...profileData }
         localStorage.setItem("currentUser", JSON.stringify(updatedUser))
         setUser(updatedUser)
-        setSuccess("个人信息���新成功！")
+        setSuccess("个人信息更新成功！")
         setIsEditing(false)
+        
+        // 触发用户偏好更新事件
+        window.dispatchEvent(new CustomEvent('userPreferencesUpdated'))
       } else {
-        setError(result.error || "更新失败")
+        // 数据库更新失败，回退到原有逻辑
+        const result = await updateUserInfo(user.id, {
+          sweetness_preference: formData.sweetness_preference,
+          favorite_brands: formData.favorite_brands,
+          disliked_ingredients: formData.disliked_ingredients,
+        })
+
+        if (result.success) {
+          const updatedUser = { ...user, ...result.user }
+          localStorage.setItem("currentUser", JSON.stringify(updatedUser))
+          setUser(updatedUser)
+          setSuccess("个人信息更新成功！")
+          setIsEditing(false)
+          
+          // 触发用户偏好更新事件
+          window.dispatchEvent(new CustomEvent('userPreferencesUpdated'))
+        } else {
+          setError(result.error || "更新失败")
+        }
       }
     } catch (err) {
       setError("更新失败，请重试")
@@ -101,15 +179,34 @@ export default function ProfilePage() {
   const handleCancel = () => {
     if (user) {
       setFormData({
-        weight: user.weight?.toString() || "",
-        height: user.height?.toString() || "",
-        age: user.age?.toString() || "",
         sweetness_preference: user.sweetness_preference || "medium",
+        favorite_brands: user.favorite_brands || [],
+        disliked_ingredients: user.disliked_ingredients || [],
       })
     }
     setIsEditing(false)
     setError("")
     setSuccess("")
+  }
+
+  // 处理品牌选择
+  const handleBrandToggle = (brand: string) => {
+    setFormData(prev => ({
+      ...prev,
+      favorite_brands: prev.favorite_brands.includes(brand)
+        ? prev.favorite_brands.filter(b => b !== brand)
+        : [...prev.favorite_brands, brand]
+    }))
+  }
+  
+  // 处理不喜小料选择
+  const handleIngredientToggle = (ingredient: string) => {
+    setFormData(prev => ({
+      ...prev,
+      disliked_ingredients: prev.disliked_ingredients.includes(ingredient)
+        ? prev.disliked_ingredients.filter(i => i !== ingredient)
+        : [...prev.disliked_ingredients, ingredient]
+    }))
   }
 
   if (!user) {
@@ -143,94 +240,169 @@ export default function ProfilePage() {
                 </div>
 
                 {!isEditing ? (
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-4">
                     <div>
-                      <Label>体重</Label>
-                      <Input value={user.weight || "未设置"} disabled className="mt-1" />
+                      <Label htmlFor="sweetness-view">甜度偏好</Label>
+                      <Select
+                        value={formData.sweetness_preference}
+                        onValueChange={(value) => {
+                          setFormData({ ...formData, sweetness_preference: value })
+                          // 自动保存甜度偏好
+                          updateUserInfo(user.id, { sweetness_preference: value }).then((result) => {
+                            if (result.success) {
+                              const updatedUser = { ...user, sweetness_preference: value }
+                              localStorage.setItem("currentUser", JSON.stringify(updatedUser))
+                              setUser(updatedUser)
+                              // 触发自定义事件通知其他组件更新
+                              window.dispatchEvent(new Event('userPreferencesUpdated'))
+                            }
+                          })
+                        }}
+                      >
+                        <SelectTrigger className="mt-1">
+                          <SelectValue placeholder="选择甜度偏好" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="low">低糖 (0-30%)</SelectItem>
+                          <SelectItem value="medium">中糖 (30-70%)</SelectItem>
+                          <SelectItem value="high">高糖 (70-100%)</SelectItem>
+                        </SelectContent>
+                      </Select>
                     </div>
+                    
                     <div>
-                      <Label>身高</Label>
-                      <Input value={user.height || "未设置"} disabled className="mt-1" />
+                      <Label>常喝的奶茶品牌（可多选）</Label>
+                      <div className="grid grid-cols-2 gap-2 mt-2">
+                        {teaBrands.map((brand) => (
+                          <div key={brand} className="flex items-center space-x-2">
+                            <Checkbox 
+                              id={`view-brand-${brand}`} 
+                              checked={formData.favorite_brands.includes(brand)}
+                              onCheckedChange={() => {
+                                const newBrands = formData.favorite_brands.includes(brand)
+                                  ? formData.favorite_brands.filter(b => b !== brand)
+                                  : [...formData.favorite_brands, brand]
+                                setFormData({ ...formData, favorite_brands: newBrands })
+                                // 自动保存品牌偏好
+                                updateUserInfo(user.id, { favorite_brands: newBrands }).then((result) => {
+                                  if (result.success) {
+                                    const updatedUser = { ...user, favorite_brands: newBrands }
+                                    localStorage.setItem("currentUser", JSON.stringify(updatedUser))
+                                    setUser(updatedUser)
+                                    // 触发自定义事件通知其他组件更新
+                                    window.dispatchEvent(new Event('userPreferencesUpdated'))
+                                  }
+                                })
+                              }}
+                            />
+                            <Label 
+                              htmlFor={`view-brand-${brand}`}
+                              className="text-sm cursor-pointer"
+                            >
+                              {brand}
+                            </Label>
+                          </div>
+                        ))}
+                      </div>
                     </div>
+                    
                     <div>
-                      <Label>年龄</Label>
-                      <Input value={user.age || "未设置"} disabled className="mt-1" />
-                    </div>
-                    <div>
-                      <Label>甜度偏好</Label>
-                      <Input
-                        value={
-                          user.sweetness_preference === "low"
-                            ? "低糖"
-                            : user.sweetness_preference === "high"
-                              ? "高糖"
-                              : "中糖"
-                        }
-                        disabled
-                        className="mt-1"
-                      />
+                      <Label>不喜欢的小料（可多选）</Label>
+                      <div className="grid grid-cols-2 gap-2 mt-2">
+                        {commonIngredients.map((ingredient) => (
+                          <div key={ingredient} className="flex items-center space-x-2">
+                            <Checkbox 
+                              id={`view-ingredient-${ingredient}`} 
+                              checked={formData.disliked_ingredients.includes(ingredient)}
+                              onCheckedChange={() => {
+                                const newIngredients = formData.disliked_ingredients.includes(ingredient)
+                                  ? formData.disliked_ingredients.filter(i => i !== ingredient)
+                                  : [...formData.disliked_ingredients, ingredient]
+                                setFormData({ ...formData, disliked_ingredients: newIngredients })
+                                // 自动保存小料偏好
+                                updateUserInfo(user.id, { disliked_ingredients: newIngredients }).then((result) => {
+                                  if (result.success) {
+                                    const updatedUser = { ...user, disliked_ingredients: newIngredients }
+                                    localStorage.setItem("currentUser", JSON.stringify(updatedUser))
+                                    setUser(updatedUser)
+                                    // 触发自定义事件通知其他组件更新
+                                    window.dispatchEvent(new Event('userPreferencesUpdated'))
+                                  }
+                                })
+                              }}
+                            />
+                            <Label 
+                              htmlFor={`view-ingredient-${ingredient}`}
+                              className="text-sm cursor-pointer"
+                            >
+                              {ingredient}
+                            </Label>
+                          </div>
+                        ))}
+                      </div>
                     </div>
                   </div>
                 ) : (
                   <form onSubmit={handleSubmit} className="space-y-4">
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <Label htmlFor="weight">体重 (kg)</Label>
-                        <Input
-                          id="weight"
-                          type="number"
-                          step="0.1"
-                          value={formData.weight}
-                          onChange={(e) => setFormData({ ...formData, weight: e.target.value })}
-                          placeholder="请输入体重"
-                          required
-                          disabled={isLoading}
-                          className="mt-1"
-                        />
+                    <div>
+                      <Label htmlFor="sweetness">甜度偏好</Label>
+                      <Select
+                        value={formData.sweetness_preference}
+                        onValueChange={(value) => setFormData({ ...formData, sweetness_preference: value })}
+                        disabled={isLoading}
+                      >
+                        <SelectTrigger className="mt-1">
+                          <SelectValue placeholder="选择甜度偏好" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="low">低糖 (0-30%)</SelectItem>
+                          <SelectItem value="medium">中糖 (30-70%)</SelectItem>
+                          <SelectItem value="high">高糖 (70-100%)</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    
+                    <div>
+                      <Label>常喝的奶茶品牌（可多选）</Label>
+                      <div className="grid grid-cols-2 gap-2 mt-2">
+                        {teaBrands.map((brand) => (
+                          <div key={brand} className="flex items-center space-x-2">
+                            <Checkbox 
+                              id={`brand-${brand}`} 
+                              checked={formData.favorite_brands.includes(brand)}
+                              onCheckedChange={() => handleBrandToggle(brand)}
+                              disabled={isLoading}
+                            />
+                            <Label 
+                              htmlFor={`brand-${brand}`}
+                              className="text-sm cursor-pointer"
+                            >
+                              {brand}
+                            </Label>
+                          </div>
+                        ))}
                       </div>
-                      <div>
-                        <Label htmlFor="height">身高 (cm)</Label>
-                        <Input
-                          id="height"
-                          type="number"
-                          step="0.1"
-                          value={formData.height}
-                          onChange={(e) => setFormData({ ...formData, height: e.target.value })}
-                          placeholder="请输入身高"
-                          required
-                          disabled={isLoading}
-                          className="mt-1"
-                        />
-                      </div>
-                      <div>
-                        <Label htmlFor="age">年龄</Label>
-                        <Input
-                          id="age"
-                          type="number"
-                          value={formData.age}
-                          onChange={(e) => setFormData({ ...formData, age: e.target.value })}
-                          placeholder="请输入年龄"
-                          required
-                          disabled={isLoading}
-                          className="mt-1"
-                        />
-                      </div>
-                      <div>
-                        <Label htmlFor="sweetness">甜度偏好</Label>
-                        <Select
-                          value={formData.sweetness_preference}
-                          onValueChange={(value) => setFormData({ ...formData, sweetness_preference: value })}
-                          disabled={isLoading}
-                        >
-                          <SelectTrigger className="mt-1">
-                            <SelectValue placeholder="选择甜度偏好" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="low">低糖 (0-30%)</SelectItem>
-                            <SelectItem value="medium">中糖 (30-70%)</SelectItem>
-                            <SelectItem value="high">高糖 (70-100%)</SelectItem>
-                          </SelectContent>
-                        </Select>
+                    </div>
+                    
+                    <div>
+                      <Label>不喜欢的小料（可多选）</Label>
+                      <div className="grid grid-cols-2 gap-2 mt-2">
+                        {commonIngredients.map((ingredient) => (
+                          <div key={ingredient} className="flex items-center space-x-2">
+                            <Checkbox 
+                              id={`ingredient-${ingredient}`} 
+                              checked={formData.disliked_ingredients.includes(ingredient)}
+                              onCheckedChange={() => handleIngredientToggle(ingredient)}
+                              disabled={isLoading}
+                            />
+                            <Label 
+                              htmlFor={`ingredient-${ingredient}`}
+                              className="text-sm cursor-pointer"
+                            >
+                              {ingredient}
+                            </Label>
+                          </div>
+                        ))}
                       </div>
                     </div>
 
@@ -255,11 +427,7 @@ export default function ProfilePage() {
                   </form>
                 )}
 
-                {!isEditing && (
-                  <Button onClick={() => setIsEditing(true)} className="w-full">
-                    编辑信息
-                  </Button>
-                )}
+
               </div>
             </CardContent>
           </Card>

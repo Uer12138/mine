@@ -14,6 +14,7 @@ interface User {
   age?: number
   sweetness_preference?: string
   favorite_brands?: string[]
+  disliked_ingredients?: string[]
 }
 
 // =========================================================================================
@@ -59,6 +60,10 @@ export async function registerUser(username: string, password: string) {
     }
 
     // Supabase 模式
+    console.log("Supabase client:", !!supabase)
+    console.log("Supabase URL:", process.env.NEXT_PUBLIC_SUPABASE_URL)
+    console.log("Supabase ANON key exists:", !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY)
+    
     const { data, error } = await supabase
       .from("users")
       .insert({
@@ -67,6 +72,8 @@ export async function registerUser(username: string, password: string) {
       })
       .select()
       .single()
+    
+    console.log("Supabase insert result:", { data, error })
 
     if (error) {
       if (error.code === "23505") {
@@ -168,6 +175,7 @@ export async function updateUserInfo(
     age?: number
     sweetness_preference?: string
     favorite_brands?: string[]
+    disliked_ingredients?: string[]
   },
 ) {
   try {
