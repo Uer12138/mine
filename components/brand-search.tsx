@@ -9848,8 +9848,12 @@ export default function BrandSearch({ selectedIngredients = {}, onIngredientsCha
   }
 
   // 处理选择奶茶添加到记录
-  const handleSelectTeaForRecord = (product: MilkTeaProduct) => {
+  const handleSelectTeaForRecord = async (product: MilkTeaProduct) => {
     try {
+      // 动态导入必要的函数
+      const { getCurrentUserIdClient } = await import('@/lib/supabase');
+      const { addTeaRecord } = await import('@/lib/user-data-sync');
+      
       // 计算总热量（包括配料）
       const ingredientsCalories = calculateIngredientsCalories();
       const totalCalories = product.calories + ingredientsCalories;
@@ -9868,6 +9872,30 @@ export default function BrandSearch({ selectedIngredients = {}, onIngredientsCha
         isManualCalories: false,
         ingredients: Object.keys(selectedIngredients || {})
       };
+      
+      // 尝试保存到数据库
+      const userId = await getCurrentUserIdClient();
+      if (userId) {
+        const teaRecordData = {
+          user_id: userId,
+          tea_product_id: null, // 品牌搜索中的奶茶不关联具体产品ID
+          tea_name: product.name,
+          brand: product.brand,
+          size: newRecord.cupSize,
+          sweetness_level: product.sugar,
+          toppings: Object.keys(selectedIngredients || {}),
+          estimated_calories: totalCalories,
+          notes: newRecord.notes,
+          recorded_at: newRecord.timestamp
+        };
+        
+        const result = await addTeaRecord(teaRecordData);
+        if (result.success && result.data) {
+          // 使用数据库返回的ID更新记录
+          newRecord.id = result.data.id;
+          console.log('记录保存到数据库成功');
+        }
+      }
       
       // 获取现有记录
       const existingRecords = JSON.parse(localStorage.getItem('teaRecords') || '[]');

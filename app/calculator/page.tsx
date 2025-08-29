@@ -51,15 +51,19 @@ class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundarySta
     return this.props.children;
   }
 }
-import { Calculator, ChevronDown, ChevronUp } from "lucide-react"
+import { Calculator, ChevronDown, ChevronUp, Save } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { useRouter } from "next/navigation"
 
 import BrandSearch from "@/components/brand-search"
 import IngredientSelector from "@/components/ingredient-selector"
+import { getCurrentUserIdClient } from "@/lib/supabase"
+import { addTeaRecord } from "@/lib/user-data-sync"
 
 
 export default function CalculatorPage() {
+  const router = useRouter()
   const [drinkCalories, setDrinkCalories] = useState(0);
   const [ingredientsCalories, setIngredientsCalories] = useState(0);
   // 总热量通过基础热量和配料热量计算得出，无需单独存储
@@ -68,6 +72,8 @@ export default function CalculatorPage() {
   const [selectedDrink, setSelectedDrink] = useState<any>(null)
   const [searchQuery, setSearchQuery] = useState("")
   const [isCalorieTableExpanded, setIsCalorieTableExpanded] = useState(false)
+  const [isSaving, setIsSaving] = useState(false)
+  const [saveMessage, setSaveMessage] = useState("")
 
   // 计算配料总热量
   const calculateIngredientsCalories = () => {
@@ -117,6 +123,51 @@ export default function CalculatorPage() {
     }, 0)
   }
 
+  // 保存当前选择到记录
+  const handleSaveToRecord = async () => {
+    if (!selectedDrink) {
+      alert('请先选择一款奶茶')
+      return
+    }
+
+    setIsSaving(true)
+    setSaveMessage('')
+
+    try {
+      const userId = await getCurrentUserIdClient()
+      
+      const teaRecordData = {
+        user_id: userId,
+        tea_product_id: null, // 热量计算器中的奶茶不关联具体产品ID
+        tea_name: selectedDrink.name,
+        brand: selectedDrink.brand,
+        size: 'medium', // 默认中杯
+        sweetness_level: '50', // 默认半糖
+        toppings: Object.keys(selectedIngredients), // 直接使用数组而不是字符串
+        estimated_calories: totalCalories,
+        notes: `热量计算器保存：${selectedDrink.name} + ${Object.keys(selectedIngredients).join('、')}`,
+        recorded_at: new Date().toISOString()
+      }
+      
+      const result = await addTeaRecord(teaRecordData)
+      
+      if (result.success) {
+        setSaveMessage('已成功保存到我的记录！')
+        alert(`已将「${selectedDrink.name}」保存到我的记录中！\n总热量：${totalCalories} kcal`)
+      } else {
+        setSaveMessage('已保存到本地记录！')
+        alert(`已将「${selectedDrink.name}」保存到本地记录中！\n总热量：${totalCalories} kcal`)
+      }
+      
+    } catch (error) {
+      console.error('保存记录失败:', error)
+      alert('保存失败，请重试')
+    } finally {
+      setIsSaving(false)
+      setTimeout(() => setSaveMessage(''), 3000)
+    }
+  }
+
   // 计算运动消耗时间（假设每消耗100kcal需要跑步10分钟）
   const calculateExerciseTime = (calories: number) => {
     return calories > 0 ? Math.round(calories / 10) : 0;
@@ -152,7 +203,7 @@ export default function CalculatorPage() {
                   variant="ghost" 
                   size="sm"
                   className="text-xs sm:text-sm px-2 sm:px-4"
-                  onClick={() => (window.location.href = "/dashboard")}
+                  onClick={() => router.push("/dashboard")}
                 >
                   <span className="hidden sm:inline">← 返回首页</span>
                   <span className="sm:hidden">← 首页</span>
@@ -203,6 +254,40 @@ export default function CalculatorPage() {
                   )}
                 </CardContent>
               </Card>
+
+              {/* 总热量显示和保存按钮 */}
+              {selectedDrink && (
+                <Card className="border-mint/20">
+                  <CardContent className="pt-6">
+                    <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
+                      <div className="text-center sm:text-left">
+                        <h3 className="text-lg font-bold text-gray-800 mb-1">
+                          {selectedDrink.name}
+                        </h3>
+                        <p className="text-sm text-gray-600 mb-2">
+                          {selectedDrink.brand} • 总热量: <span className="font-bold text-mint-dark">{totalCalories} kcal</span>
+                        </p>
+                        {Object.keys(selectedIngredients).length > 0 && (
+                          <p className="text-xs text-gray-500">
+                            配料: {Object.keys(selectedIngredients).join('、')}
+                          </p>
+                        )}
+                        {saveMessage && (
+                          <p className="text-sm text-green-600 mt-2">{saveMessage}</p>
+                        )}
+                      </div>
+                      <Button 
+                        onClick={handleSaveToRecord}
+                        disabled={isSaving}
+                        className="bg-mint hover:bg-mint-dark text-white px-6 py-2 rounded-lg flex items-center gap-2"
+                      >
+                        <Save className="w-4 h-4" />
+                        {isSaving ? '保存中...' : '保存到记录'}
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
             </div>
 
 

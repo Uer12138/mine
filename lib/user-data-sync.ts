@@ -23,8 +23,9 @@ export interface TeaRecord {
   tea_name: string
   brand?: string
   size: string
-  sweetness_level: string
-  toppings?: string
+  sweetness_level: string | number
+  toppings?: string[]
+  tea_product_id?: number | null
   estimated_calories: number
   sugar_content?: number
   caffeine_content?: number
@@ -144,6 +145,25 @@ export async function updateUserProfile(userId: string, updates: Partial<UserPro
 // 奶茶记录管理
 // =========================================================================================
 
+// 糖分级别转换函数
+function convertSweetnessLevelToNumber(sweetness: string | number): number {
+  if (typeof sweetness === 'number') {
+    return sweetness
+  }
+  
+  const sweetnessMap: { [key: string]: number } = {
+    '无糖': 0,
+    '少糖': 30,
+    '三分糖': 30,
+    '半糖': 50,
+    '五分糖': 50,
+    '七分糖': 70,
+    '全糖': 100
+  }
+  
+  return sweetnessMap[sweetness] || 50 // 默认半糖
+}
+
 /**
  * 添加奶茶记录
  */
@@ -165,10 +185,18 @@ export async function addTeaRecord(record: Omit<TeaRecord, 'id' | 'created_at' |
       return { success: true, data: newRecord }
     }
 
+    // 转换糖分级别为数字并处理toppings字段
+    const processedRecord = {
+      ...record,
+      sweetness_level: convertSweetnessLevelToNumber(record.sweetness_level),
+      toppings: record.toppings && record.toppings.length > 0 ? record.toppings : [],
+      tea_product_id: record.tea_product_id || null // 避免外键约束错误
+    }
+
     const { data, error } = await client
       .from('tea_records')
       .insert({
-        ...record,
+        ...processedRecord,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
       })
@@ -253,10 +281,18 @@ export async function updateTeaRecord(recordId: string, userId: string, updates:
       return { success: true, data: records[recordIndex] }
     }
 
+    // 如果更新包含糖分级别，需要转换为数字
+    const processedUpdates = {
+      ...updates,
+      ...(updates.sweetness_level !== undefined && {
+        sweetness_level: convertSweetnessLevelToNumber(updates.sweetness_level)
+      })
+    }
+
     const { data, error } = await client
       .from('tea_records')
       .update({
-        ...updates,
+        ...processedUpdates,
         updated_at: new Date().toISOString()
       })
       .eq('id', recordId)

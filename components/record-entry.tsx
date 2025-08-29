@@ -166,13 +166,13 @@ export default function RecordEntry({ onClose, editingRecord, onSave }: RecordEn
       
       const teaRecordData = {
         user_id: userId,
-        tea_product_id: selectedDrink?.id ? parseInt(selectedDrink.id) : undefined,
+        tea_product_id: null, // 手动记录不关联具体产品ID
         custom_name: selectedDrink ? undefined : customName,
         tea_name: recordData.drinkName,
         brand: recordData.brand,
         size: cupSize,
         sweetness_level: sugarLevel.toString(),
-        toppings: selectedToppings.map(t => t.name).join(', '),
+        toppings: selectedToppings.map(t => t.name),
         estimated_calories: recordData.calories,
         mood: mood || undefined,
         notes: notes || undefined,

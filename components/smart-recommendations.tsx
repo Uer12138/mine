@@ -42,12 +42,12 @@ export default function SmartRecommendations({ searchQuery, onDrinkSelect }: Sma
       
       const teaRecordData = {
         user_id: userId,
-        tea_product_id: parseInt(product.id),
+        tea_product_id: null, // 智能推荐中的奶茶不关联具体产品ID
         tea_name: product.name,
         brand: product.brand,
         size: product.size === '大杯' ? 'large' : product.size === '小杯' ? 'small' : 'medium',
         sweetness_level: product.sugar || '标准',
-        toppings: product.ingredients.join(', '),
+        toppings: product.ingredients,
         estimated_calories: product.calories,
         notes: `智能推荐：${product.ingredients.join('、')}`,
         recorded_at: new Date().toISOString()
