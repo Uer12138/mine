@@ -190,11 +190,9 @@ export default function TestAuthPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <h4 className="font-medium mb-2">在控制台运行调试命令</h4>
-                <div className="bg-gray-100 p-3 rounded text-sm font-mono">debugAuth.runAllChecks()</div>
               </div>
               <div>
                 <h4 className="font-medium mb-2">快速修复登录问题</h4>
-                <div className="bg-gray-100 p-3 rounded text-sm font-mono">fixLogin.fixUserData()</div>
               </div>
             </div>
 

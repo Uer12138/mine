@@ -114,7 +114,7 @@ export default function RecordEntry({ onClose, editingRecord, onSave }: RecordEn
     const drinkCalories = Math.round(baseCalories * sizeMultiplier * (0.7 + 0.3 * sugarMultiplier))
     
     // 计算小料卡路里
-    const toppingsCalories = selectedToppings.reduce((sum, topping) => sum + topping.calories, 0)
+    const toppingsCalories = selectedToppings.reduce((sum: number, topping: any) => sum + topping.calories, 0)
     
     // 总卡路里
     const totalCalories = drinkCalories + toppingsCalories
@@ -172,7 +172,7 @@ export default function RecordEntry({ onClose, editingRecord, onSave }: RecordEn
         brand: recordData.brand,
         size: cupSize,
         sweetness_level: sugarLevel.toString(),
-        toppings: selectedToppings.map(t => t.name),
+        toppings: selectedToppings.map((t: any) => t.name),
         estimated_calories: recordData.calories,
         mood: mood || undefined,
         notes: notes || undefined,
@@ -420,8 +420,8 @@ export default function RecordEntry({ onClose, editingRecord, onSave }: RecordEn
                       </div>
                       {selectedToppings.length > 0 && (
                         <div className="flex justify-between">
-                          <span>小料（{selectedToppings.map(t => t.name).join('、')}）：</span>
-                          <span>+{selectedToppings.reduce((sum, t) => sum + t.calories, 0)} kcal</span>
+                          <span>小料（{selectedToppings.map((t: any) => t.name).join('、')}）：</span>
+                          <span>+{selectedToppings.reduce((sum: number, t: any) => sum + t.calories, 0)} kcal</span>
                         </div>
                       )}
                     </div>

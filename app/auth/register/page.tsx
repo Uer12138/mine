@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import React, { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
@@ -15,7 +15,20 @@ export default function RegisterPage() {
   const [confirmPassword, setConfirmPassword] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState('')
+  const [debugMode, setDebugMode] = useState(false)
+  const [detailedError, setDetailedError] = useState('')
+  const [environmentStatus, setEnvironmentStatus] = useState(null)
   const router = useRouter()
+
+  // 检查环境状态
+  React.useEffect(() => {
+    const hasSupabase = !!(process.env.NEXT_PUBLIC_SUPABASE_URL && 
+                          process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY)
+    setEnvironmentStatus({
+      supabase: hasSupabase,
+      mode: hasSupabase ? 'database' : 'local'
+    })
+  }, [])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -36,17 +49,24 @@ export default function RegisterPage() {
     }
 
     try {
+      console.log('开始注册流程:', { username, passwordLength: password.length })
       const result = await registerUser(username, password)
+      console.log('注册结果:', result)
       
       if (result.success) {
         // 注册成功后跳转到补充信息页面
         localStorage.setItem('tempUserId', result.user.id)
+        console.log('注册成功，跳转到onboarding页面')
         router.push('/onboarding')
       } else {
+        console.error('注册失败:', result)
         setError(result.error || '注册失败')
+        setDetailedError(JSON.stringify(result, null, 2))
       }
     } catch (err) {
+      console.error('注册异常:', err)
       setError('注册失败，请重试')
+      setDetailedError(err.message || err.toString())
     } finally {
       setIsLoading(false)
     }
@@ -103,6 +123,41 @@ export default function RegisterPage() {
             {error && (
               <div className="text-red-500 text-sm text-center">
                 {error}
+              </div>
+            )}
+            
+            {/* 环境状态显示 */}
+            {environmentStatus && (
+              <div className="text-xs text-gray-500 text-center">
+                模式: {environmentStatus.mode === 'database' ? '数据库' : '本地存储'}
+                {environmentStatus.mode === 'local' && (
+                  <div className="text-yellow-600 mt-1">
+                    ⚠️ 当前使用本地存储模式，数据仅保存在浏览器中
+                  </div>
+                )}
+              </div>
+            )}
+            
+            {/* 调试模式按钮（仅开发环境） */}
+            {process.env.NODE_ENV === 'development' && (
+              <div className="text-center">
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => setDebugMode(!debugMode)}
+                  className="text-xs"
+                >
+                  🔍 {debugMode ? '隐藏' : '显示'}调试信息
+                </Button>
+              </div>
+            )}
+            
+            {/* 调试信息显示 */}
+            {debugMode && detailedError && (
+              <div className="mt-4 p-3 bg-gray-100 rounded text-xs">
+                <div className="font-semibold mb-2">详细错误信息:</div>
+                <pre className="whitespace-pre-wrap">{detailedError}</pre>
               </div>
             )}
             

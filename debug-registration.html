@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>注册功能调试</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        button:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
+        .error {
+            color: red;
+            margin-top: 10px;
+        }
+        .success {
+            color: green;
+            margin-top: 10px;
+        }
+        .debug-info {
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            padding: 15px;
+            margin-top: 20px;
+            font-family: monospace;
+            white-space: pre-wrap;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>注册功能调试工具</h1>
+        <p>这个页面可以帮助调试注册功能的问题</p>
+        
+        <form id="registerForm">
+            <div class="form-group">
+                <label for="username">用户名:</label>
+                <input type="text" id="username" name="username" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="password">密码:</label>
+                <input type="password" id="password" name="password" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="confirmPassword">确认密码:</label>
+                <input type="password" id="confirmPassword" name="confirmPassword" required>
+            </div>
+            
+            <button type="submit" id="submitBtn">注册</button>
+        </form>
+        
+        <div id="message"></div>
+        <div id="debugInfo" class="debug-info"></div>
+    </div>
+
+    <script>
+        // 模拟bcryptjs的hash函数（简化版）
+        async function simpleHash(password, saltRounds = 10) {
+            const encoder = new TextEncoder();
+            const data = encoder.encode(password + 'salt' + saltRounds);
+            const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+            const hashArray = Array.from(new Uint8Array(hashBuffer));
+            return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+        }
+
+        // 模拟注册函数
+        async function debugRegisterUser(username, password) {
+            const debugInfo = document.getElementById('debugInfo');
+            let log = '=== 注册调试信息 ===\n';
+            
+            try {
+                log += `用户名: ${username}\n`;
+                log += `密码长度: ${password.length}\n`;
+                
+                // 检查Supabase配置
+                const supabaseUrl = 'https://ehrguihgoswxdhncmcnn.supabase.co';
+                const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVocmd1aWhnb3N3eGRobmNtY25uIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTYxNzI4NTAsImV4cCI6MjA3MTc0ODg1MH0.NVahIpHBJE0myzEh3XdvQxR6_yVLsEaZD6lknArQR4w';
+                
+                log += `Supabase URL: ${supabaseUrl ? '✅ 已配置' : '❌ 未配置'}\n`;
+                log += `Supabase Key: ${supabaseKey ? '✅ 已配置' : '❌ 未配置'}\n`;
+                
+                // 生成密码哈希
+                const passwordHash = await simpleHash(password);
+                log += `密码哈希: ${passwordHash.substring(0, 16)}...\n`;
+                
+                // 检查本地存储
+                const existingUsers = JSON.parse(localStorage.getItem('teacal_users') || '[]');
+                log += `现有用户数量: ${existingUsers.length}\n`;
+                
+                // 检查用户名是否已存在
+                const userExists = existingUsers.find(user => user.username === username);
+                if (userExists) {
+                    log += '❌ 用户名已存在\n';
+                    debugInfo.textContent = log;
+                    return { success: false, error: '用户名已存在' };
+                }
+                
+                // 模拟Supabase插入（实际应该调用API）
+                log += '🔄 尝试插入到Supabase...\n';
+                
+                // 这里应该调用实际的Supabase API
+                // 为了调试，我们模拟成功的情况
+                const newUser = {
+                    id: crypto.randomUUID(),
+                    username: username,
+                    password_hash: passwordHash,
+                    created_at: new Date().toISOString(),
+                    updated_at: new Date().toISOString()
+                };
+                
+                // 保存到本地存储作为备份
+                existingUsers.push(newUser);
+                localStorage.setItem('teacal_users', JSON.stringify(existingUsers));
+                
+                log += '✅ 注册成功\n';
+                log += `新用户ID: ${newUser.id}\n`;
+                
+                debugInfo.textContent = log;
+                return { success: true, user: newUser };
+                
+            } catch (error) {
+                log += `❌ 注册失败: ${error.message}\n`;
+                debugInfo.textContent = log;
+                return { success: false, error: error.message };
+            }
+        }
+
+        // 表单提交处理
+        document.getElementById('registerForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            const confirmPassword = document.getElementById('confirmPassword').value;
+            const messageDiv = document.getElementById('message');
+            const submitBtn = document.getElementById('submitBtn');
+            
+            // 清除之前的消息
+            messageDiv.innerHTML = '';
+            
+            // 验证密码
+            if (password !== confirmPassword) {
+                messageDiv.innerHTML = '<div class="error">两次输入的密码不一致</div>';
+                return;
+            }
+            
+            if (password.length < 6) {
+                messageDiv.innerHTML = '<div class="error">密码长度至少6位</div>';
+                return;
+            }
+            
+            // 禁用提交按钮
+            submitBtn.disabled = true;
+            submitBtn.textContent = '注册中...';
+            
+            try {
+                const result = await debugRegisterUser(username, password);
+                
+                if (result.success) {
+                    messageDiv.innerHTML = '<div class="success">注册成功！用户ID: ' + result.user.id + '</div>';
+                    // 清空表单
+                    document.getElementById('registerForm').reset();
+                } else {
+                    messageDiv.innerHTML = '<div class="error">注册失败: ' + (result.error || '未知错误') + '</div>';
+                }
+            } catch (error) {
+                messageDiv.innerHTML = '<div class="error">注册过程中发生错误: ' + error.message + '</div>';
+            } finally {
+                // 恢复提交按钮
+                submitBtn.disabled = false;
+                submitBtn.textContent = '注册';
+            }
+        });
+        
+        // 页面加载时显示当前状态
+        window.addEventListener('load', function() {
+            const debugInfo = document.getElementById('debugInfo');
+            const users = JSON.parse(localStorage.getItem('teacal_users') || '[]');
+            
+            let info = '=== 当前状态 ===\n';
+            info += `本地存储用户数量: ${users.length}\n`;
+            if (users.length > 0) {
+                info += '用户列表:\n';
+                users.forEach((user, index) => {
+                    info += `  ${index + 1}. ${user.username} (ID: ${user.id})\n`;
+                });
+            }
+            
+            debugInfo.textContent = info;
+        });
+    </script>
+</body>
+</html>

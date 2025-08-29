@@ -87,11 +87,29 @@ export async function registerUser(username: string, password: string) {
     console.log("=== REGISTRATION ATTEMPT END (SUCCESS) ===")
     return { success: true, user: data }
   } catch (error) {
-    console.error("Registration error:", error)
+    console.error("Registration error details:", {
+      message: error.message,
+      code: error.code,
+      details: error.details,
+      hint: error.hint,
+      stack: error.stack
+    })
     console.log("=== REGISTRATION ATTEMPT END (ERROR) ===")
+    
+    // 返回更详细的错误信息
     return {
       success: false,
       error: error instanceof Error ? error.message : "注册失败",
+      details: {
+        code: error.code,
+        hint: error.hint,
+        timestamp: new Date().toISOString(),
+        supabaseConfigured: !!supabase,
+        environmentVars: {
+          url: !!process.env.NEXT_PUBLIC_SUPABASE_URL,
+          key: !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+        }
+      }
     }
   }
 }
